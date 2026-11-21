@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-serif: "Fraunces", Georgia, serif;
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-brand-600: var(--brand);
+  --color-brand-700: var(--brand-strong);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-muted: var(--muted);
+}
+
+:root {
+  color-scheme: light;
+  --ink: oklch(28% 0.04 265);
+  --paper: oklch(96% 0.02 265);
+  --card: oklch(99% 0.008 270);
+  --field: oklch(100% 0.005 270);
+  --line: oklch(86% 0.03 265);
+  --brand: oklch(48% 0.16 275);
+  --brand-strong: oklch(40% 0.16 275);
+  --accent: oklch(42% 0.16 275);
+  --on-accent: oklch(98% 0.01 270);
+  --danger: oklch(48% 0.16 25);
+  --danger-bg: oklch(95% 0.03 25);
+  --warn: oklch(42% 0.1 75);
+  --warn-bg: oklch(95% 0.04 90);
+  --muted: oklch(48% 0.03 265);
+  --glow: oklch(84% 0.1 285);
+  --glow-2: oklch(86% 0.08 230);
+  --shadow: oklch(35% 0.05 270 / 0.1);
+}
+
+.dark {
+  color-scheme: dark;
+  --ink: oklch(94% 0.02 265);
+  --paper: oklch(18% 0.04 268);
+  --card: oklch(23% 0.04 268);
+  --field: oklch(20% 0.035 268);
+  --line: oklch(36% 0.04 268);
+  --brand: oklch(78% 0.12 270);
+  --brand-strong: oklch(84% 0.1 265);
+  --accent: oklch(72% 0.14 275);
+  --on-accent: oklch(20% 0.05 275);
+  --danger: oklch(80% 0.1 25);
+  --danger-bg: oklch(32% 0.06 25);
+  --warn: oklch(86% 0.08 90);
+  --warn-bg: oklch(32% 0.05 80);
+  --muted: oklch(75% 0.03 265);
+  --glow: oklch(34% 0.12 290);
+  --glow-2: oklch(30% 0.1 230);
+  --shadow: oklch(8% 0.03 270 / 0.45);
+}
+
+body {
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 70% 45% at 0% -10%, var(--glow), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 100% 0%, var(--glow-2), transparent 55%),
+    radial-gradient(ellipse 40% 30% at 80% 100%, var(--glow), transparent 50%);
+  min-height: 100vh;
+}
+
+@layer components {
+  .panel {
+    border: 1px solid var(--line);
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+    border-radius: 1.25rem;
+    box-shadow: 0 18px 50px var(--shadow);
+    backdrop-filter: blur(10px);
+  }
+
+  .field {
+    width: 100%;
+    border: 1px solid var(--line);
+    background: var(--field);
+    color: var(--ink);
+    border-radius: 0.8rem;
+    padding: 0.7rem 0.85rem;
+    outline: none;
+  }
+
+  .field::placeholder {
+    color: var(--muted);
+  }
+
+  .field:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 25%, transparent);
+  }
+
+  .btn {
+    border-radius: 0.8rem;
+    background: var(--accent);
+    color: var(--on-accent);
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+  }
+
+  .btn-ghost {
+    border-radius: 0.8rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    padding: 0.55rem 0.85rem;
+    font-weight: 600;
+  }
+
+  .alert {
+    border-radius: 0.8rem;
+    background: var(--danger-bg);
+    color: var(--danger);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .alert-warn {
+    border-radius: 0.8rem;
+    background: var(--warn-bg);
+    color: var(--warn);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .field-error {
+    color: var(--danger);
+    font-weight: 400;
+  }
+}
