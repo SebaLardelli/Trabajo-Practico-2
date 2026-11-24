@@ -27,8 +27,10 @@ export const auth = betterAuth({
   database: mongodbAdapter(client.db(), { client }),
   user: {
     additionalFields: {
-      career: { type: "string", required: true, input: true },
-      faculty: { type: "string", required: true, input: true },
+      // required queda en false: Google no manda la carrera, y si el campo es
+      // obligatorio el alta falla antes del hook que la copia del estado OAuth.
+      career: { type: "string", required: false, input: true },
+      faculty: { type: "string", required: false, input: true },
     },
   },
   databaseHooks: {

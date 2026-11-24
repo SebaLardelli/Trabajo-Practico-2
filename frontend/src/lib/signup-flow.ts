@@ -17,13 +17,18 @@ export type SocialReturn = "cancel" | "no-account" | "retry" | "link" | "other";
 export function classifySocialReturn(error: string | null): SocialReturn | null {
   if (!error) return null;
   const text = error.toLowerCase();
-  if (text === "account_not_linked") return "link";
+  if (text.includes("account_not_linked") || text.includes("account not linked")) return "link";
   if (text.includes("access_denied") || text.includes("cancel")) return "cancel";
+  if (text.includes("state_mismatch") || text.includes("state_security_mismatch") || text.includes("state_not_found")) {
+    return "retry";
+  }
   if (
     text.includes("signup") ||
     text.includes("sign up") ||
     text.includes("sign_up") ||
     text.includes("carrera") ||
+    text.includes("missing_field") ||
+    text.includes("is required") ||
     text.includes("unable_to_create") ||
     text.includes("user_not_found")
   ) {
