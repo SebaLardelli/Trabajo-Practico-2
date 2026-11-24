@@ -1,12 +1,21 @@
 // Better Auth guarda usuarios, sesiones y cuentas de GitHub y Google en Mongo
 // (colecciones user, session, account y verification).
 import { betterAuth } from "better-auth";
-import { APIError, getOAuthState } from "better-auth/api";
+import { APIError, addOAuthServerContext, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { admin } from "better-auth/plugins";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { MongoClient } from "mongodb";
 import { findCareer } from "../data/uai.js";
 import { sendPasswordResetEmail } from "./mail.js";
+
+function careerFromOAuth(state: unknown): string | undefined {
+  if (!state || typeof state !== "object") return undefined;
+  const record = state as Record<string, unknown>;
+  if (typeof record.career === "string" && record.career.trim()) return record.career;
+  const nested = record.serverContext;
+  if (!nested || typeof nested !== "object" || !("career" in nested)) return undefined;
+  return typeof nested.career === "string" ? nested.career : undefined;
+}
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -38,7 +47,7 @@ export const auth = betterAuth({
       create: {
         before: async (user) => {
           const state = await getOAuthState();
-          const fromState = state && typeof state === "object" && "career" in state ? state.career : undefined;
+          const fromState = careerFromOAuth(state);
           const raw = typeof user.career === "string" && user.career.trim() ? user.career : fromState;
           const career = typeof raw === "string" ? findCareer(raw) : undefined;
           if (!career) {
@@ -91,4 +100,15 @@ export const auth = betterAuth({
   },
   // admin(): agrega user.role ("user" por defecto) y endpoints para listar usuarios y cambiar roles.
   plugins: [admin()],
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-in/social") return;
+      const extra = ctx.body && typeof ctx.body === "object" && "additionalData" in ctx.body ? ctx.body.additionalData : null;
+      if (!extra || typeof extra !== "object") return;
+      const career = "career" in extra && typeof extra.career === "string" ? extra.career : "";
+      const faculty = "faculty" in extra && typeof extra.faculty === "string" ? extra.faculty : "";
+      if (!findCareer(career)) return;
+      await addOAuthServerContext({ career, faculty });
+    }),
+  },
 });

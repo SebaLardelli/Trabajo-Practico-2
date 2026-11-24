@@ -27,8 +27,6 @@ export function classifySocialReturn(error: string | null): SocialReturn | null 
     text.includes("sign up") ||
     text.includes("sign_up") ||
     text.includes("carrera") ||
-    text.includes("missing_field") ||
-    text.includes("is required") ||
     text.includes("unable_to_create") ||
     text.includes("user_not_found")
   ) {
@@ -43,8 +41,12 @@ export function providerLabel(provider: SocialProvider | null): string {
   return "GitHub o Google";
 }
 
-export function signupNotice(kind: SocialReturn | null, provider: SocialProvider | null, fromLogin: boolean): string | null {
+export function signupNotice(kind: SocialReturn | null, provider: SocialProvider | null, fromLogin: boolean, detail = ""): string | null {
   const name = providerLabel(provider);
+  const text = detail.toLowerCase();
+  if (text.includes("is required") || text.includes("missing_field")) {
+    return `La carrera quedó elegida. ${name} no la manda: volvé a tocar Registrarme con ${name}.`;
+  }
   if (fromLogin || kind === "no-account") {
     return `No hay una cuenta de ${name}. Elegí la carrera y registrate con ${name}.`;
   }
@@ -52,7 +54,7 @@ export function signupNotice(kind: SocialReturn | null, provider: SocialProvider
     return `Cancelaste ${name}. Para crear la cuenta, elegí la carrera y tocá el botón de nuevo.`;
   }
   if (kind === "retry") {
-    return `El registro con ${name} no terminó. Elegí la carrera y tocá el botón de nuevo.`;
+    return `El registro con ${name} no terminó. La carrera sigue elegida: tocá el botón de nuevo.`;
   }
   return null;
 }

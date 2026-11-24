@@ -33,9 +33,10 @@ export const Register = () => {
   useEffect(() => {
     const saved = rememberedSignupCareer();
     if (saved) setValue("career", saved);
-    const kind = classifySocialReturn(`${params.get("error") ?? ""} ${params.get("error_description") ?? ""}`.trim());
+    const detail = `${params.get("error") ?? ""} ${params.get("error_description") ?? ""}`.trim();
+    const kind = classifySocialReturn(detail);
     const fromLogin = params.get("alta") === "1";
-    const text = signupNotice(kind, arrivedProvider, fromLogin);
+    const text = signupNotice(kind, arrivedProvider, fromLogin, detail);
     if (text) setNotice(text);
     if (!params.get("error")) return;
     const next = new URLSearchParams(params);
