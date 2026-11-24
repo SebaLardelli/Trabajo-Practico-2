@@ -7,6 +7,7 @@ import loansRouter from "./routes/loans.routes.js";
 import noticesRouter from "./routes/notices.routes.js";
 import { connectMongoDB } from "./config/db.js";
 import { ensureFixedAdmin } from "./lib/fixed-admin.js";
+import { reconcileStock } from "./lib/loan-policy.js";
 import { seedLibrary } from "./lib/seed-library.js";
 import Book from "./models/Book.js";
 
@@ -49,6 +50,7 @@ async function startServer(): Promise<void> {
     const created = await seedLibrary();
     console.log(`[server] catalogo cargado: ${created} libros`);
   }
+  await reconcileStock();
 
   app.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);

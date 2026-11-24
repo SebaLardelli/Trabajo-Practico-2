@@ -6,6 +6,7 @@ import { useSession } from "../lib/auth-client";
 import { demoBorrow, demoLoans, demoReturn } from "../lib/demo-loans";
 import { formatDay } from "../lib/days";
 import { spineColor } from "../lib/spine";
+import { bookStock } from "../lib/stock";
 import { RegisterBook } from "./RegisterBook";
 import { getBook } from "../services/books";
 import { borrowBook, listMyLoans, returnLoan } from "../services/loans";
@@ -64,8 +65,8 @@ export const BookDetail = () => {
     ? "Tenés un préstamo vencido. No podés pedir otro libro hasta devolverlo."
     : !activeLoan && open.length >= 3
       ? "Ya tenés 3 libros sin devolver. Devolvé alguno para pedir otro."
-      : !activeLoan && book && book.available === false
-        ? "No quedan ejemplares de este título."
+    : !activeLoan && book && bookStock(book).left === 0
+      ? "No quedan ejemplares de este título."
         : null;
 
   const handleLoan = async () => {
@@ -88,7 +89,8 @@ export const BookDetail = () => {
           setNotice(result.error);
         } else {
           setDemoAvailable(book._id, Boolean(activeLoan));
-          setBook({ ...book, available: Boolean(activeLoan) });
+          const fresh = findDemoBook(book._id);
+          if (fresh) setBook(fresh);
           setLoans(demoLoans());
           setNotice(activeLoan ? `Devolviste «${book.title}».` : `Retiraste «${book.title}». Devolvé antes del ${formatDay(result.loan?.dueDate ?? "")}.`);
         }
@@ -126,6 +128,7 @@ export const BookDetail = () => {
   if (!book) return <div className="skeleton h-64 max-w-3xl" aria-busy="true" />;
 
   const shelf = `/?faculty=${encodeURIComponent(book.faculty ?? "")}&career=${encodeURIComponent(book.career ?? "")}`;
+  const stock = bookStock(book);
 
   return (
     <article className="panel grid max-w-3xl gap-6 p-6 sm:grid-cols-[8rem_1fr] sm:p-8">
@@ -139,10 +142,10 @@ export const BookDetail = () => {
       <div>
         <span
           className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            book.available ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-200"
+            stock.inRoom ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-200"
           }`}
         >
-          {activeLoan ? "En tu poder" : book.available ? "En sala" : "Sin ejemplares"}
+          {activeLoan ? "En tu poder" : stock.inRoom ? "En sala" : "Sin ejemplares"}
         </span>
         <h1 className="mt-3 text-4xl font-semibold tracking-tight">{book.title}</h1>
         <p className="mt-2 text-lg text-muted">{book.author}</p>
@@ -151,9 +154,22 @@ export const BookDetail = () => {
         </p>
         <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
           Podés llevarte hasta 3 libros. Si uno está vencido, no podés pedir otro hasta devolverlo. El plazo inicial es de quince días.
-          {typeof book.copies === "number" ? ` Quedan ${Math.max(0, book.copies - (book.onLoan ?? 0))} de ${book.copies}.` : ""}
         </p>
-        <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+        <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-3">
+          <div className="rounded-2xl bg-field px-4 py-3">
+            <dt className="text-muted">Totales</dt>
+            <dd className="text-xl font-semibold">{stock.total}</dd>
+          </div>
+          <div className="rounded-2xl bg-field px-4 py-3">
+            <dt className="text-muted">Quedan</dt>
+            <dd className="text-xl font-semibold">{stock.left === 0 ? "Sin ejemplares" : stock.left}</dd>
+          </div>
+          <div className="rounded-2xl bg-field px-4 py-3">
+            <dt className="text-muted">Prestados</dt>
+            <dd className="text-xl font-semibold">{stock.loaned}</dd>
+          </div>
+        </dl>
+        <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-2xl bg-field px-4 py-3">
             <dt className="text-muted">Páginas</dt>
             <dd className="text-xl font-semibold">{book.pages}</dd>

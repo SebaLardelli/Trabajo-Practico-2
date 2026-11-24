@@ -46,7 +46,7 @@ const bookSchema = new Schema<IBookDocument>(
     copies: {
       type: Number,
       default: 1,
-      min: [1, "Tiene que haber al menos 1 ejemplar"],
+      min: [0, "Los ejemplares no pueden ser negativos"],
       max: [99, "No se pueden cargar mas de 99 ejemplares"],
     },
     onLoan: {

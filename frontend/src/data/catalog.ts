@@ -87,7 +87,9 @@ const demoBooks: Book[] = libraryBooks.map((book, index) => ({
   author: book.author,
   pages: book.pages,
   publishedAt: new Date(book.publishedAt).toISOString(),
-  available: book.available,
+  available: true,
+  copies: 2,
+  onLoan: 0,
   faculty: book.faculty,
   career: book.career,
   createdAt: new Date(book.publishedAt).toISOString(),
@@ -95,8 +97,9 @@ const demoBooks: Book[] = libraryBooks.map((book, index) => ({
 }));
 
 function withLoan(book: Book): Book {
-  if (!rented.has(book._id)) return book;
-  return { ...book, available: rented.get(book._id) ?? book.available };
+  const total = book.copies ?? 2;
+  const loaned = rented.get(book._id) === false ? 1 : 0;
+  return { ...book, copies: total, onLoan: loaned, available: total > 0 && loaned < total };
 }
 
 export function setDemoAvailable(id: string, available: boolean): void {

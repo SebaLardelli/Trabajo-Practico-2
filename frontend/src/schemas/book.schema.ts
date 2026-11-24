@@ -14,7 +14,7 @@ export const bookSchema = z.object({
   copies: z
     .number({ error: "La cantidad tiene que ser un numero" })
     .int({ error: "La cantidad tiene que ser un numero entero" })
-    .min(1, { error: "Tiene que haber al menos 1 ejemplar" })
+    .min(0, { error: "Los ejemplares no pueden ser negativos" })
     .max(99, { error: "No se pueden cargar mas de 99 ejemplares" }),
   faculty: z.string().trim().min(1, { error: "La facultad es obligatoria" }).max(80),
   career: z.string().trim().min(1, { error: "La carrera es obligatoria" }).max(140),

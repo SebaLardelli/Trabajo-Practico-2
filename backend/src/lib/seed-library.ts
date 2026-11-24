@@ -12,6 +12,7 @@ export async function seedLibrary(): Promise<number> {
           ...book,
           copies: 2,
           onLoan: 0,
+          available: true,
           publishedAt: new Date(book.publishedAt),
         },
       },

@@ -90,8 +90,8 @@ export const BookForm = ({ book, authors, onSave, onCancel }: BookFormProps) => 
         </label>
       </div>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Ejemplares
-        <input type="number" min={1} max={99} className="field font-normal" {...register("copies", { valueAsNumber: true })} />
+        Ejemplares totales
+        <input type="number" min={0} max={99} className="field font-normal" {...register("copies", { valueAsNumber: true })} />
         {errors.copies && <span className="field-error">{errors.copies.message}</span>}
       </label>
       {errors.root?.server && (

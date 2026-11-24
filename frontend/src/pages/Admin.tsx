@@ -4,12 +4,13 @@ import { BookForm } from "../components/BookForm";
 import { catalogAuthors, filterDemoBooks } from "../data/catalog";
 import { getErrorMessage } from "../lib/api";
 import type { BookFormValues } from "../schemas/book.schema";
+import { bookStock } from "../lib/stock";
 import { loanSummary } from "../services/loans";
 import { createBook, deleteBook, listBooks, updateBook } from "../services/books";
 import type { Book } from "../types/book";
 import type { LoanSummary } from "../types/loan";
 
-type SortKey = "title" | "author" | "career" | "pages" | "publishedAt" | "copies" | "onLoan" | "available";
+type SortKey = "title" | "author" | "career" | "pages" | "publishedAt" | "copies" | "left" | "onLoan";
 
 const columns: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "title", label: "Título" },
@@ -17,16 +18,17 @@ const columns: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "career", label: "Carrera" },
   { key: "pages", label: "Páginas", align: "right" },
   { key: "publishedAt", label: "Publicación" },
-  { key: "copies", label: "Ejemplares", align: "right" },
+  { key: "copies", label: "Totales", align: "right" },
+  { key: "left", label: "Quedan", align: "right" },
   { key: "onLoan", label: "Prestados", align: "right" },
-  { key: "available", label: "Estado" },
 ];
 
 function sortValue(book: Book, key: SortKey): string | number {
+  const stock = bookStock(book);
   if (key === "pages") return book.pages;
-  if (key === "copies") return book.copies ?? 1;
-  if (key === "onLoan") return book.onLoan ?? 0;
-  if (key === "available") return book.available ? 1 : 0;
+  if (key === "copies") return stock.total;
+  if (key === "left") return stock.left;
+  if (key === "onLoan") return stock.loaned;
   if (key === "publishedAt") return new Date(book.publishedAt).getTime() || 0;
   return (book[key] ?? "").toLocaleLowerCase("es");
 }
@@ -135,8 +137,8 @@ export const Admin = () => {
   const stats = summary
     ? [
         ["Títulos", summary.titles],
-        ["Ejemplares", summary.copies],
-        ["En sala", summary.inRoom],
+        ["Totales", summary.copies],
+        ["Quedan", summary.inRoom],
         ["Prestados", summary.onLoan],
       ]
     : [["Títulos", books.length]];
@@ -236,20 +238,20 @@ export const Admin = () => {
             </tr>
           </thead>
           <tbody>
-            {visible.map((book) => (
+            {visible.map((book) => {
+              const stock = bookStock(book);
+              return (
               <tr key={book._id} className={`border-b border-line last:border-0 ${editing?._id === book._id ? "bg-field" : ""}`}>
                 <td className="px-3 py-3 font-medium">{book.title}</td>
                 <td className="px-3 py-3">{book.author}</td>
                 <td className="px-3 py-3">{book.career ?? "—"}</td>
                 <td className="px-3 py-3 text-right tabular-nums">{book.pages}</td>
                 <td className="px-3 py-3">{new Date(book.publishedAt).toLocaleDateString("es-AR")}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{book.copies ?? 1}</td>
-                <td className="px-3 py-3 text-right tabular-nums">{book.onLoan ?? 0}</td>
-                <td className="px-3 py-3">
-                  <span className={book.available ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-200"}>
-                    {book.available ? "En sala" : "Sin ejemplares"}
-                  </span>
+                <td className="px-3 py-3 text-right tabular-nums">{stock.total}</td>
+                <td className={`px-3 py-3 text-right tabular-nums ${stock.left === 0 ? "text-amber-700 dark:text-amber-200" : ""}`}>
+                  {stock.left === 0 ? "Sin ejemplares" : stock.left}
                 </td>
+                <td className="px-3 py-3 text-right tabular-nums">{stock.loaned}</td>
                 <td className="px-3 py-3">
                   <div className="flex gap-2">
                     <button
@@ -269,7 +271,8 @@ export const Admin = () => {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {visible.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-6 text-muted">

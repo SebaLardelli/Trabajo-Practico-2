@@ -96,7 +96,7 @@ export async function createBook(req: Request<Record<string, string>, unknown, C
 
   try {
     const copies = body.copies ?? 1;
-    const book = await Book.create({ ...body, copies, onLoan: 0, available: true });
+    const book = await Book.create({ ...body, copies, onLoan: 0, available: copies > 0 });
     res.status(201).json(book);
   } catch (error) {
     console.error("[books] error creating:", error);

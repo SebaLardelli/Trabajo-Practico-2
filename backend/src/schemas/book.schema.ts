@@ -34,7 +34,7 @@ export const createBookSchema = z.object({
   pages: z.coerce.number().int().min(1, { error: "El libro tiene que tener al menos 1 pagina" }).max(20000),
   publishedAt,
   available: z.boolean().default(true),
-  copies: z.coerce.number().int().min(1, { error: "Tiene que haber al menos 1 ejemplar" }).max(99).default(1),
+  copies: z.coerce.number().int().min(0, { error: "Los ejemplares no pueden ser negativos" }).max(99).default(1),
   faculty: z.string().trim().min(1, { error: "La facultad es obligatoria" }).max(80),
   career: z.string().trim().min(1, { error: "La carrera es obligatoria" }).max(140),
 });

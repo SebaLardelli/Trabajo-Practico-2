@@ -84,11 +84,18 @@ export async function refreshStock(bookId: string): Promise<void> {
   const onLoan = await Loan.countDocuments({ book: bookId, returnedAt: null });
   const book = await Book.findById(bookId);
   if (!book) return;
-  const copies = book.copies > 0 ? book.copies : 1;
+  const copies = Math.max(0, book.copies ?? 0);
   book.copies = copies;
   book.onLoan = onLoan;
-  book.available = onLoan < copies;
+  book.available = copies > 0 && onLoan < copies;
   await book.save();
+}
+
+export async function reconcileStock(): Promise<void> {
+  const books = await Book.find().select("_id copies");
+  for (const book of books) {
+    await refreshStock(String(book._id));
+  }
 }
 
 export async function refreshOverdue(): Promise<void> {
@@ -152,9 +159,9 @@ export async function borrowBook(input: {
     throw new LoanError(409, input.forSelf ? "Ya retiraste este título y todavía no lo devolviste." : `${readerName} este título sin devolver.`);
   }
 
-  const copies = book.copies > 0 ? book.copies : 1;
+  const copies = Math.max(0, book.copies ?? 0);
   const onLoan = await Loan.countDocuments({ book: book._id, returnedAt: null });
-  if (onLoan >= copies) throw new LoanError(409, "No quedan ejemplares de este título.");
+  if (copies === 0 || onLoan >= copies) throw new LoanError(409, "No quedan ejemplares de este título.");
 
   const startKey = input.actorIsAdmin && input.startDate ? input.startDate : todayKey();
   const dueKey = input.actorIsAdmin && input.dueDate ? input.dueDate : addDays(startKey, LOAN_DAYS);
