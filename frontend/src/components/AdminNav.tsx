@@ -14,5 +14,8 @@ export const AdminNav = () => (
     <NavLink to="/admin/usuarios" className={item}>
       Lectores
     </NavLink>
+    <NavLink to="/admin/sesiones" className={item}>
+      Sesiones
+    </NavLink>
   </nav>
 );

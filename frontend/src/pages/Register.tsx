@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
@@ -6,6 +6,7 @@ import { GitHubIcon, GoogleIcon } from "../components/BrandIcons";
 import { UaiMark } from "../components/UaiMark";
 import { CAREERS, FACULTIES } from "../data/uai";
 import { signIn, signUp, useSession, type SocialProvider } from "../lib/auth-client";
+import { classifySocialReturn, rememberedSignupCareer, rememberSignupCareer, signupNotice } from "../lib/signup-flow";
 import { registerSchema, type RegisterFormValues } from "../schemas/auth.schema";
 
 export const Register = () => {
@@ -15,6 +16,7 @@ export const Register = () => {
     register,
     handleSubmit,
     setError,
+    setValue,
     getValues,
     watch,
     formState: { errors, isSubmitting },
@@ -23,25 +25,36 @@ export const Register = () => {
     defaultValues: { name: "", email: "", password: "", career: "" },
   });
 
-  const [socialError, setSocialError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [params] = useSearchParams();
-  const socialReturnedError = params.get("error");
-  const arrivedWithoutAccount = params.get("alta") === "1";
-  const arrivedProvider = params.get("provider") === "google" ? "Google" : params.get("provider") === "github" ? "GitHub" : null;
+  const arrivedProvider: SocialProvider | null = params.get("provider") === "google" ? "google" : params.get("provider") === "github" ? "github" : null;
   const careerReady = CAREERS.some((item) => item.name === watch("career"));
+
+  useEffect(() => {
+    const saved = rememberedSignupCareer();
+    if (saved) setValue("career", saved);
+    const kind = classifySocialReturn(params.get("error"));
+    const fromLogin = params.get("alta") === "1";
+    const text = signupNotice(kind, arrivedProvider, fromLogin);
+    if (text) setNotice(text);
+    if (!params.get("error")) return;
+    const next = new URLSearchParams(params);
+    next.delete("error");
+    navigate({ pathname: "/register", search: next.toString() ? `?${next.toString()}` : "" }, { replace: true });
+  }, [arrivedProvider, navigate, params, setValue]);
 
   if (session && !isSubmitting) {
     return <Navigate to="/" replace />;
   }
 
   const handleSocial = async (provider: SocialProvider) => {
-    setSocialError(null);
     const career = CAREERS.find((item) => item.name === getValues("career"));
     if (!career) {
       setError("career", { message: "Elegí tu carrera" });
-      setSocialError("Elegí tu carrera para registrarte con GitHub o Google.");
+      setNotice("Elegí la carrera y después tocá el botón de GitHub o Google.");
       return;
     }
+    rememberSignupCareer(career.name);
     const { error } = await signIn.social({
       provider,
       callbackURL: "/",
@@ -49,7 +62,10 @@ export const Register = () => {
       requestSignUp: true,
       additionalData: { career: career.name, faculty: career.faculty },
     });
-    if (error) setSocialError(error.message ?? "No se pudo crear la cuenta");
+    if (error) {
+      const kind = classifySocialReturn(`${error.code ?? ""} ${error.message ?? ""}`);
+      setNotice(signupNotice(kind, provider, false) ?? "Elegí la carrera y tocá el botón de nuevo.");
+    }
   };
 
   const onSubmit = async (values: RegisterFormValues) => {
@@ -60,7 +76,16 @@ export const Register = () => {
     }
     const { error } = await signUp.email({ ...values, faculty: career.faculty });
     if (error) {
-      setError("root.server", { message: error.message ?? "No se pudo crear la cuenta" });
+      const text = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
+      if (text.includes("exist") || text.includes("already")) {
+        setError("root.server", { message: "Ese email ya tiene cuenta. Entrá desde Iniciar sesión." });
+        return;
+      }
+      if (text.includes("carrera")) {
+        setError("career", { message: "Elegí tu carrera" });
+        return;
+      }
+      setError("root.server", { message: "Revisá los datos y volvé a crear la cuenta." });
       return;
     }
     navigate("/", { replace: true });
@@ -76,14 +101,7 @@ export const Register = () => {
             <h1 className="text-2xl font-semibold tracking-tight">Crear cuenta</h1>
           </div>
         </div>
-        {arrivedWithoutAccount && arrivedProvider && (
-          <p className="mb-6 flex items-start gap-2 text-sm font-semibold text-accent">
-            <svg viewBox="0 0 24 24" aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 fill-accent">
-              <path d="M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6Zm0 14.2a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Zm1.05-2.15h-2.1l-.35-7.3h2.8l-.35 7.3Z" />
-            </svg>
-            No hay una cuenta de {arrivedProvider}. Elegí la carrera y registrate con {arrivedProvider}.
-          </p>
-        )}
+        {notice && <p className="alert-warn mb-6">{notice}</p>}
         <p className="mb-6 text-sm text-muted">Elegí la carrera. Vale para el email y también para GitHub o Google.</p>
         <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm font-medium">
@@ -152,10 +170,6 @@ export const Register = () => {
             ¡Elegí la carrera para habilitar GitHub y Google!
           </p>
         )}
-        {socialReturnedError && !socialError && (
-          <p className="alert mt-3">No se pudo crear la cuenta. Elegí la carrera y volvé a intentar.</p>
-        )}
-        {socialError && <p className="alert mt-3">{socialError}</p>}
         <p className="mt-6 text-center text-sm text-muted">
           ¿Ya tenés cuenta?{" "}
           <Link to="/login" className="font-medium text-brand-700">

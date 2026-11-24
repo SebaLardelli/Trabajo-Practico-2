@@ -13,6 +13,7 @@ import { Login } from "../pages/Login";
 import { NotFound } from "../pages/NotFound";
 import { Register } from "../pages/Register";
 import { ResetPassword } from "../pages/ResetPassword";
+import { Sessions } from "../pages/Sessions";
 import { Users } from "../pages/Users";
 import { ProtectedRoute } from "./ProtectedRoute";
 
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
               { index: true, element: <Admin /> },
               { path: "prestamos", element: <AdminLoans /> },
               { path: "usuarios", element: <Users /> },
+              { path: "sesiones", element: <Sessions /> },
             ],
           },
         ],

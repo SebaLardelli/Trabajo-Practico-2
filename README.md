@@ -89,6 +89,8 @@ Callback de Google: `{BETTER_AUTH_URL}/api/auth/callback/google`. Un solo client
 | GET | `/api/auth/get-session` | público |
 | POST | `/api/auth/sign-out` | sesión |
 | POST | `/api/auth/admin/set-role` | admin |
+| POST | `/api/auth/admin/list-user-sessions` | admin |
+| POST | `/api/auth/admin/revoke-user-session` | admin |
 
 `GET /api/books` acepta `search`, `available` (`true` o `false`), `faculty`, `career`, `page` y `limit`.
 

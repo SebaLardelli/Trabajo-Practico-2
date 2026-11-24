@@ -5,6 +5,7 @@ import { Link, Navigate, useLocation, useNavigate, type Location } from "react-r
 import { GitHubIcon, GoogleIcon } from "../components/BrandIcons";
 import { UaiMark } from "../components/UaiMark";
 import { authClient, fetchSession, signIn, useSession, type SocialProvider } from "../lib/auth-client";
+import { classifySocialReturn } from "../lib/signup-flow";
 import { loginSchema, type LoginFormValues } from "../schemas/auth.schema";
 
 export const Login = () => {
@@ -30,11 +31,13 @@ export const Login = () => {
   const linkProvider: SocialProvider = providerParam === "google" ? "google" : "github";
   const mustLinkSocial = oauthError === "account_not_linked";
   const namedProvider: SocialProvider | null = providerParam === "google" || providerParam === "github" ? providerParam : null;
+  const socialReturn = classifySocialReturn(oauthError);
+  const needsAccount = Boolean(namedProvider) && socialReturn === "no-account";
 
   useEffect(() => {
-    if (oauthError !== "signup_disabled" || !namedProvider) return;
+    if (!needsAccount || !namedProvider) return;
     navigate(`/register?provider=${namedProvider}&alta=1`, { replace: true });
-  }, [oauthError, namedProvider, navigate]);
+  }, [needsAccount, namedProvider, navigate]);
 
   if (session && !isSubmitting) {
     return <Navigate to={afterLogin(session.user.role)} replace />;
@@ -70,13 +73,12 @@ export const Login = () => {
       errorCallbackURL: `/login?provider=${provider}`,
     });
     if (data?.url || data?.redirect || !error) return;
-    const detail = `${error.code ?? ""} ${error.message ?? ""}`.toLowerCase();
-    const noAccount = detail.includes("signup") || detail.includes("sign up");
-    if (noAccount) {
+    const kind = classifySocialReturn(`${error.code ?? ""} ${error.message ?? ""}`);
+    if (kind === "no-account") {
       navigate(`/register?provider=${provider}&alta=1`);
       return;
     }
-    setSocialError(error.message ?? "No se pudo iniciar sesión");
+    setSocialError(kind === "cancel" ? "Cancelaste el ingreso." : "No se pudo iniciar sesión. Si no tenés cuenta, registrate.");
   };
 
   return (
@@ -90,11 +92,13 @@ export const Login = () => {
           </div>
         </div>
         <p className="mb-6 text-sm text-muted">Entrá con email, GitHub o Google.</p>
-        {oauthError && (
+        {oauthError && !needsAccount && (
           <p className="alert-warn mb-4">
             {mustLinkSocial
               ? `Ya tenés una cuenta con ese email. Ingresá tu contraseña para vincular ${linkProvider === "google" ? "Google" : "GitHub"}.`
-              : `No se pudo iniciar sesión con ${linkProvider === "google" ? "Google" : "GitHub"}.`}
+              : socialReturn === "cancel"
+                ? `Cancelaste el ingreso con ${linkProvider === "google" ? "Google" : "GitHub"}.`
+                : `No se pudo iniciar sesión con ${linkProvider === "google" ? "Google" : "GitHub"}. Si no tenés cuenta, registrate.`}
           </p>
         )}
         <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
