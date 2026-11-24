@@ -62,12 +62,24 @@ export async function loanSummary(_req: Request, res: Response): Promise<void> {
 }
 
 export async function listLoans(_req: Request, res: Response): Promise<void> {
-  const { status } = res.locals.query as ListLoansQuery;
+  const { status, page, limit } = res.locals.query as ListLoansQuery;
   try {
     await refreshOverdue();
     const filter = status ? { status } : {};
-    const loans = await Loan.find(filter).sort({ dueDate: 1, createdAt: -1 }).limit(300);
-    res.status(200).json({ data: loans.map(presentLoan) });
+    const skip = (page - 1) * limit;
+    const [loans, total] = await Promise.all([
+      Loan.find(filter)
+        .select("book bookTitle userId userName userEmail userCareer startDate dueDate returnedAt status")
+        .sort({ dueDate: 1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Loan.countDocuments(filter),
+    ]);
+    res.status(200).json({
+      data: loans.map((loan) => presentLoan(loan as never)),
+      meta: { total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    });
   } catch (error) {
     sendError(res, error, "No se pudieron listar los préstamos");
   }

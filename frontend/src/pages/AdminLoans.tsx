@@ -16,6 +16,7 @@ interface ListedUser {
 }
 
 const emptySummary: LoanSummary = { titles: 0, copies: 0, onLoan: 0, inRoom: 0, active: 0, overdue: 0, returned: 0 };
+const PAGE = 10;
 
 function statusLabel(status: LoanRecord["status"]): string {
   if (status === "overdue") return "Vencido";
@@ -38,12 +39,26 @@ export const AdminLoans = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const load = async (status: "" | LoanRecord["status"] = filter) => {
-    const [nextSummary, nextLoans] = await Promise.all([loanSummary(), listLoans(status || undefined)]);
-    setSummary(nextSummary);
-    setLoans(nextLoans);
-    setDrafts(Object.fromEntries(nextLoans.map((loan) => [loan._id, { startDate: loan.startDate, dueDate: loan.dueDate }])));
+  const load = async (nextPage = page, status: "" | LoanRecord["status"] = filter) => {
+    setLoading(true);
+    try {
+      const [nextSummary, listed] = await Promise.all([
+        loanSummary(),
+        listLoans({ status: status || undefined, page: nextPage, limit: PAGE }),
+      ]);
+      setSummary(nextSummary);
+      setLoans(listed.data);
+      setTotal(listed.meta.total);
+      setTotalPages(listed.meta.totalPages);
+      setDrafts(Object.fromEntries(listed.data.map((loan) => [loan._id, { startDate: loan.startDate, dueDate: loan.dueDate }])));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -213,7 +228,8 @@ export const AdminLoans = () => {
             className={filter === value ? "btn text-sm" : "btn-ghost text-sm"}
             onClick={() => {
               setFilter(value);
-              load(value).catch((err: unknown) => setError(getErrorMessage(err)));
+              setPage(1);
+              load(1, value).catch((err: unknown) => setError(getErrorMessage(err)));
             }}
           >
             {label}
@@ -290,12 +306,42 @@ export const AdminLoans = () => {
             {loans.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-muted">
-                  Todavía no hay préstamos en este filtro.
+                  {loading ? "Cargando la lista…" : "Todavía no hay préstamos en este filtro."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+      <p className="mt-3 text-center text-sm text-muted">{total} préstamos</p>
+      <div className="mt-3 flex items-center justify-center gap-3">
+        <button
+          type="button"
+          className="btn-ghost"
+          disabled={page <= 1 || loading}
+          onClick={() => {
+            const next = page - 1;
+            setPage(next);
+            load(next).catch((err: unknown) => setError(getErrorMessage(err)));
+          }}
+        >
+          Anterior
+        </button>
+        <span className="text-sm text-muted">
+          Página {page} de {totalPages}
+        </span>
+        <button
+          type="button"
+          className="btn-ghost"
+          disabled={page >= totalPages || loading}
+          onClick={() => {
+            const next = page + 1;
+            setPage(next);
+            load(next).catch((err: unknown) => setError(getErrorMessage(err)));
+          }}
+        >
+          Siguiente
+        </button>
       </div>
     </section>
   );

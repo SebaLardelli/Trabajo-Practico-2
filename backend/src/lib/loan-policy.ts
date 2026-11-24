@@ -116,6 +116,8 @@ export async function reconcileStock(): Promise<void> {
 }
 
 let notifyingOverdue = false;
+let refreshOverdueTask: Promise<void> | null = null;
+let overdueMarkedAt = 0;
 
 async function notifyPendingOverdue(): Promise<void> {
   const today = parseDay(todayKey());
@@ -123,19 +125,28 @@ async function notifyPendingOverdue(): Promise<void> {
   for (const loan of loans) await notifyOverdue(loan);
 }
 
-export async function refreshOverdue(): Promise<void> {
+export function refreshOverdue(): Promise<void> {
+  if (Date.now() - overdueMarkedAt < 30_000) return Promise.resolve();
+  if (refreshOverdueTask) return refreshOverdueTask;
   const today = parseDay(todayKey());
-  await Loan.updateMany(
+  refreshOverdueTask = Loan.updateMany(
     { returnedAt: null, dueDate: { $lt: today }, status: { $ne: "overdue" } },
     { $set: { status: "overdue" } },
-  );
-  if (notifyingOverdue) return;
-  notifyingOverdue = true;
-  void notifyPendingOverdue()
-    .catch((error: unknown) => console.error("[loans] no se pudieron avisar los vencidos:", error))
+  )
+    .then(() => {
+      overdueMarkedAt = Date.now();
+      if (notifyingOverdue) return;
+      notifyingOverdue = true;
+      void notifyPendingOverdue()
+        .catch((error: unknown) => console.error("[loans] no se pudieron avisar los vencidos:", error))
+        .finally(() => {
+          notifyingOverdue = false;
+        });
+    })
     .finally(() => {
-      notifyingOverdue = false;
+      refreshOverdueTask = null;
     });
+  return refreshOverdueTask;
 }
 
 export async function findReader(userId: string): Promise<Reader | null> {

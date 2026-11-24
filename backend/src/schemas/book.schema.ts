@@ -6,7 +6,7 @@ const publishedAt = z.coerce.date().refine((date) => !Number.isNaN(date.getTime(
 
 export const listBooksQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(8),
+  limit: z.coerce.number().int().min(1).max(500).default(8),
   search: z
     .string()
     .trim()
@@ -26,6 +26,8 @@ export const listBooksQuerySchema = z.object({
     .max(140)
     .optional()
     .transform((value) => value || undefined),
+  sort: z.enum(["title", "author", "career", "pages", "publishedAt", "copies", "onLoan", "left"]).optional(),
+  dir: z.enum(["asc", "desc"]).optional(),
 });
 
 export const createBookSchema = z.object({

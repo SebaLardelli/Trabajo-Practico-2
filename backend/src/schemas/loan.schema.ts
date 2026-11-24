@@ -16,6 +16,8 @@ export const updateLoanSchema = z.object({
 
 export const listLoansQuerySchema = z.object({
   status: z.enum(["active", "overdue", "returned"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
 });
 
 export const markNoticesSchema = z.object({

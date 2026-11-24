@@ -39,6 +39,8 @@ const loanSchema = new Schema<ILoanDocument>(
 
 loanSchema.index({ userId: 1, returnedAt: 1 });
 loanSchema.index({ book: 1, returnedAt: 1 });
+loanSchema.index({ status: 1, dueDate: 1 });
+loanSchema.index({ returnedAt: 1, dueDate: 1, status: 1 });
 
 const Loan: Model<ILoanDocument> = model<ILoanDocument>("Loan", loanSchema);
 

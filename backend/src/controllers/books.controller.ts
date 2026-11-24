@@ -14,7 +14,7 @@ function readId(value: string | string[] | undefined): string {
 }
 
 export async function listBooks(_req: Request, res: Response): Promise<void> {
-  const { search, page, limit, available, faculty, career } = res.locals.query as ListBooksQuery;
+  const { search, page, limit, available, faculty, career, sort, dir } = res.locals.query as ListBooksQuery;
   const filter: QueryFilter<IBookDocument> = {};
 
   if (search) {
@@ -34,10 +34,27 @@ export async function listBooks(_req: Request, res: Response): Promise<void> {
 
   try {
     const skip = (page - 1) * limit;
-    const [books, total] = await Promise.all([
-      Book.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-      Book.countDocuments(filter),
-    ]);
+    const direction = dir === "desc" ? -1 : 1;
+    const [books, total] =
+      sort === "left"
+        ? await Promise.all([
+            Book.aggregate([
+              { $match: filter },
+              { $addFields: { left: { $subtract: [{ $ifNull: ["$copies", 0] }, { $ifNull: ["$onLoan", 0] }] } } },
+              { $sort: { left: direction, title: 1 } },
+              { $skip: skip },
+              { $limit: limit },
+            ]),
+            Book.countDocuments(filter),
+          ])
+        : await Promise.all([
+            Book.find(filter)
+              .sort(sort && sort !== "title" ? { [sort]: direction, title: 1 } : { title: direction })
+              .skip(skip)
+              .limit(limit)
+              .lean(),
+            Book.countDocuments(filter),
+          ]);
 
     res.status(200).json({
       data: books,

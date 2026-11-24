@@ -6,9 +6,17 @@ export async function loanSummary(): Promise<LoanSummary> {
   return data;
 }
 
-export async function listLoans(status?: LoanRecord["status"]): Promise<LoanRecord[]> {
-  const { data } = await api.get<{ data: LoanRecord[] }>("/loans", { params: status ? { status } : {} });
-  return data.data;
+export async function listLoans(params?: {
+  status?: LoanRecord["status"];
+  page?: number;
+  limit?: number;
+}): Promise<{ data: LoanRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }> {
+  const query: Record<string, string | number> = { page: params?.page ?? 1, limit: params?.limit ?? 10 };
+  if (params?.status) query.status = params.status;
+  const { data } = await api.get<{ data: LoanRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }>("/loans", {
+    params: query,
+  });
+  return data;
 }
 
 export async function listMyLoans(): Promise<LoanRecord[]> {

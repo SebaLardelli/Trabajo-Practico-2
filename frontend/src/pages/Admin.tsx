@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AdminNav } from "../components/AdminNav";
 import { BookForm } from "../components/BookForm";
 import { catalogAuthors, filterDemoBooks } from "../data/catalog";
+import { CAREERS } from "../data/uai";
 import { getErrorMessage } from "../lib/api";
 import type { BookFormValues } from "../schemas/book.schema";
 import { bookStock } from "../lib/stock";
@@ -11,6 +12,8 @@ import type { Book } from "../types/book";
 import type { LoanSummary } from "../types/loan";
 
 type SortKey = "title" | "author" | "career" | "pages" | "publishedAt" | "copies" | "left" | "onLoan";
+
+const PAGE = 10;
 
 const columns: { key: SortKey; label: string; align?: "right" }[] = [
   { key: "title", label: "Título" },
@@ -41,58 +44,87 @@ export const Admin = () => {
   const [summary, setSummary] = useState<LoanSummary | null>(null);
   const [fromPage, setFromPage] = useState(false);
   const [query, setQuery] = useState("");
+  const [search, setSearch] = useState("");
   const [career, setCareer] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("title");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-
-  const load = async () => {
-    const [first, stock] = await Promise.all([listBooks({ page: 1, limit: 100 }), loanSummary().catch(() => null)]);
-    if (first.meta.total === 0) {
-      setBooks(filterDemoBooks({ page: 1, limit: 500 }).data);
-      setSummary(null);
-      setFromPage(true);
-      return;
-    }
-    const loaded = [...first.data];
-    for (let page = 2; page <= first.meta.totalPages; page += 1) {
-      const next = await listBooks({ page, limit: 100 });
-      loaded.push(...next.data);
-    }
-    setBooks(loaded);
-    setSummary(stock);
-    setFromPage(false);
-  };
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
+  const demoCatalog = useRef(false);
 
   useEffect(() => {
-    load().catch((err: unknown) => setError(getErrorMessage(err)));
-  }, []);
+    const handle = window.setTimeout(() => {
+      setSearch(query.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(handle);
+  }, [query]);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    const run = async () => {
+      const stock = loanSummary().catch(() => null);
+      const listed = await listBooks({
+        page,
+        limit: PAGE,
+        search: search || undefined,
+        career: career || undefined,
+        sort: sortKey,
+        dir: sortDir,
+      });
+      if (!active) return;
+      if (listed.meta.total > 0) demoCatalog.current = false;
+      else if (!search && !career) demoCatalog.current = true;
+      if (demoCatalog.current) {
+        const all = filterDemoBooks({ page: 1, limit: 500, search, career });
+        const direction = sortDir === "asc" ? 1 : -1;
+        const sorted = [...all.data].sort((a, b) => {
+          const left = sortValue(a, sortKey);
+          const right = sortValue(b, sortKey);
+          if (typeof left === "number" && typeof right === "number") return (left - right) * direction;
+          return String(left).localeCompare(String(right), "es") * direction;
+        });
+        const start = (page - 1) * PAGE;
+        setBooks(sorted.slice(start, start + PAGE));
+        setTotal(all.meta.total);
+        setTotalPages(Math.max(1, Math.ceil(all.meta.total / PAGE)));
+        setFromPage(true);
+        setSummary(null);
+        return;
+      }
+      setBooks(listed.data);
+      setTotal(listed.meta.total);
+      setTotalPages(listed.meta.totalPages);
+      setFromPage(false);
+      setSummary(await stock);
+    };
+    run()
+      .catch((err: unknown) => {
+        if (active) setError(getErrorMessage(err));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [page, search, career, sortKey, sortDir, reload]);
 
   const careers = useMemo(
-    () => [...new Set(books.map((book) => book.career).filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "es")),
-    [books],
+    () => [...CAREERS.map((item) => item.name), "Todas las carreras"].sort((a, b) => a.localeCompare(b, "es")),
+    [],
   );
   const authors = useMemo(
     () => [...new Set([...catalogAuthors(), ...books.map((book) => book.author)])].sort((a, b) => a.localeCompare(b, "es")),
     [books],
   );
 
-  const visible = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase("es");
-    const filtered = books.filter((book) => {
-      if (career && book.career !== career) return false;
-      if (!needle) return true;
-      return [book.title, book.author, book.career].some((value) => value?.toLocaleLowerCase("es").includes(needle));
-    });
-    const direction = sortDir === "asc" ? 1 : -1;
-    return filtered.sort((a, b) => {
-      const left = sortValue(a, sortKey);
-      const right = sortValue(b, sortKey);
-      if (typeof left === "number" && typeof right === "number") return (left - right) * direction;
-      return String(left).localeCompare(String(right), "es") * direction;
-    });
-  }, [books, career, query, sortDir, sortKey]);
-
   const sortBy = (key: SortKey) => {
+    setPage(1);
     if (sortKey === key) {
       setSortDir((current) => (current === "asc" ? "desc" : "asc"));
       return;
@@ -113,7 +145,7 @@ export const Admin = () => {
     }
     setEditing(null);
     setFormOpen(false);
-    await load();
+    setReload((current) => current + 1);
   };
 
   const handleDelete = async (book: Book) => {
@@ -128,7 +160,7 @@ export const Admin = () => {
         setEditing(null);
         setFormOpen(false);
       }
-      await load();
+      setReload((current) => current + 1);
     } catch (err) {
       setError(getErrorMessage(err));
     }
@@ -198,7 +230,14 @@ export const Admin = () => {
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium sm:w-72">
           Carrera
-          <select className="field font-normal" value={career} onChange={(event) => setCareer(event.target.value)}>
+          <select
+            className="field font-normal"
+            value={career}
+            onChange={(event) => {
+              setCareer(event.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">Todas</option>
             {careers.map((item) => (
               <option key={item} value={item}>
@@ -210,7 +249,7 @@ export const Admin = () => {
       </div>
 
       <p className="mt-3 text-sm text-muted">
-        {visible.length} de {books.length} libros
+        {total === 0 ? "0 libros" : `${(page - 1) * PAGE + (books.length ? 1 : 0)}–${(page - 1) * PAGE + books.length} de ${total}`}
       </p>
 
       <div className="panel mt-3 max-h-[70vh] overflow-auto">
@@ -238,7 +277,7 @@ export const Admin = () => {
             </tr>
           </thead>
           <tbody>
-            {visible.map((book) => {
+            {books.map((book) => {
               const stock = bookStock(book);
               return (
               <tr key={book._id} className={`border-b border-line last:border-0 ${editing?._id === book._id ? "bg-field" : ""}`}>
@@ -273,15 +312,26 @@ export const Admin = () => {
               </tr>
               );
             })}
-            {visible.length === 0 && (
+            {books.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-6 text-muted">
-                  No hay libros con ese filtro.
+                  {loading ? "Cargando la lista…" : "No hay libros con ese filtro."}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
+      </div>
+      <div className="mt-4 flex items-center justify-center gap-3">
+        <button type="button" className="btn-ghost" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)}>
+          Anterior
+        </button>
+        <span className="text-sm text-muted">
+          Página {page} de {totalPages}
+        </span>
+        <button type="button" className="btn-ghost" disabled={page >= totalPages || loading} onClick={() => setPage((current) => current + 1)}>
+          Siguiente
+        </button>
       </div>
     </section>
   );

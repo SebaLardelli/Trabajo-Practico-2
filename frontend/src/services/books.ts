@@ -9,6 +9,8 @@ export interface ListBooksParams {
   available?: "true" | "false";
   faculty?: string;
   career?: string;
+  sort?: "title" | "author" | "career" | "pages" | "publishedAt" | "copies" | "onLoan" | "left";
+  dir?: "asc" | "desc";
 }
 
 export async function listBooks(params: ListBooksParams): Promise<BookList> {
@@ -17,6 +19,8 @@ export async function listBooks(params: ListBooksParams): Promise<BookList> {
   if (params.available) query.available = params.available;
   if (params.faculty) query.faculty = params.faculty;
   if (params.career) query.career = params.career;
+  if (params.sort) query.sort = params.sort;
+  if (params.dir) query.dir = params.dir;
   const { data } = await api.get<BookList>("/books", { params: query });
   return data;
 }
