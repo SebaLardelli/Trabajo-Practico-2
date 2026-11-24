@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { AdminNav } from "../components/AdminNav";
 import { authClient, useSession } from "../lib/auth-client";
 
 const FIXED_ADMIN_EMAIL = "admin@biblioteca.test";
@@ -54,7 +53,6 @@ export const Users = () => {
 
   return (
     <section>
-      <AdminNav />
       <h1 className="text-3xl font-semibold tracking-tight">Lectores</h1>
       <p className="mt-2 mb-6 text-sm text-muted">
         El administrador de la biblioteca es una cuenta fija. El resto se registra como alumno y elige su carrera.

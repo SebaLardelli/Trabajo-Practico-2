@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AdminNav } from "../components/AdminNav";
 import { BookForm } from "../components/BookForm";
 import { catalogAuthors, filterDemoBooks } from "../data/catalog";
 import { CAREERS } from "../data/uai";
@@ -177,7 +176,6 @@ export const Admin = () => {
 
   return (
     <section>
-      <AdminNav />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Libros</h1>

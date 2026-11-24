@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { AdminNav } from "../components/AdminNav";
 import { authClient } from "../lib/auth-client";
 import { addDays, formatDay, todayKey } from "../lib/days";
 import { getErrorMessage } from "../lib/api";
@@ -144,7 +143,6 @@ export const AdminLoans = () => {
 
   return (
     <section>
-      <AdminNav />
       <h1 className="text-3xl font-semibold tracking-tight">Préstamos</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted">
         Cada lector puede llevarse hasta 3 libros. Si tiene uno vencido, no puede pedir otro hasta devolverlo. Al devolver o al vencer, le llega un aviso.

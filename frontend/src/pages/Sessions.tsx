@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { AdminNav } from "../components/AdminNav";
 import { authClient } from "../lib/auth-client";
 
 interface ListedUser {
@@ -79,7 +78,6 @@ export const Sessions = () => {
 
   return (
     <section>
-      <AdminNav />
       <h1 className="text-3xl font-semibold tracking-tight">Sesiones</h1>
       <p className="mt-2 mb-6 text-sm text-muted">
         Cada ingreso deja una sesión en Mongo. Cerrarla saca a esa persona del sitio hasta que vuelva a entrar.
