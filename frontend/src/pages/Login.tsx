@@ -43,8 +43,11 @@ export const Login = () => {
   const onSubmit = async (credentials: LoginFormValues) => {
     const { error } = await signIn.email(credentials);
     if (error) {
+      const origin = error.code === "INVALID_ORIGIN" || (error.message ?? "").toLowerCase().includes("origin");
       setError("root.server", {
-        message: "El email o la contraseña no coinciden. Si todavía no tenés cuenta, registrate.",
+        message: origin
+          ? "Este sitio no está autorizado para iniciar sesión. Revisá BETTER_AUTH_URL en Render."
+          : "El email o la contraseña no coinciden. Si todavía no tenés cuenta, registrate.",
       });
       return;
     }

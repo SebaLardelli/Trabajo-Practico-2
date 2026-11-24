@@ -94,7 +94,7 @@ Callback de Google: `{BETTER_AUTH_URL}/api/auth/callback/google`. Un solo client
 
 Editar y eliminar un libro es solo del admin. Crear responde 201. Sin sesión, 401. Sin permiso, 403. Si el libro no existe, 404. Si Zod rechaza el body, 400.
 
-Un alumno puede retirar hasta 3 libros, y solo de su carrera. Si tiene uno vencido, no puede pedir otro hasta devolverlo. Esos movimientos quedan en `/api/loans` y los avisos en `/api/notices`.
+Un alumno puede retirar hasta 3 libros, de cualquier carrera. Si tiene uno vencido, no puede pedir otro hasta devolverlo. Esos movimientos quedan en `/api/loans` y los avisos en `/api/notices`.
 
 ## Quién entra
 
@@ -105,11 +105,11 @@ El administrador está fijo. No se registra y no se le puede sacar el rol. Al in
 | admin | admin@biblioteca.test | Admin1234! |
 | alumno | alumno@biblioteca.test | Alumno1234! |
 
-El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos y solo puede cargar y alquilar libros de esa carrera. Cualquier otro alumno se registra en **Registrarse**:
+El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos y puede cargar libros de esa carrera. Puede alquilar cualquier libro. Cualquier otro alumno se registra en **Registrarse**:
 
 1. Elige su carrera. Sin eso no se crea la cuenta, tampoco con GitHub o Google.
 2. Entra con el email y la contraseña que eligió, o con el mismo GitHub o Google.
-3. Puede registrar libros solo de esa carrera y alquilar solo esos ejemplares.
+3. Registra un libro desde el detalle de un título, con **Registrar**. El alta queda en su carrera. Puede alquilar cualquier ejemplar.
 4. En **Alquilados** ve el listado de los libros que pidió, con la fecha en que los retiró y la fecha límite. También le aparece un resumen arriba del catálogo. En **Avisos** ve el retiro, la devolución y si un libro está vencido.
 
 ## Deploy en Render

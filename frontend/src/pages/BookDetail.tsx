@@ -2,27 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { findDemoBook, setDemoAvailable } from "../data/catalog";
 import { getErrorMessage } from "../lib/api";
-import { useSession, type SessionUser } from "../lib/auth-client";
+import { useSession } from "../lib/auth-client";
 import { demoBorrow, demoLoans, demoReturn } from "../lib/demo-loans";
 import { formatDay } from "../lib/days";
 import { spineColor } from "../lib/spine";
+import { RegisterBook } from "./RegisterBook";
 import { getBook } from "../services/books";
 import { borrowBook, listMyLoans, returnLoan } from "../services/loans";
 import type { Book } from "../types/book";
 import type { LoanRecord } from "../types/loan";
-
-function loanDenialMessage(user: SessionUser | undefined, book: Book | null): string | null {
-  if (!user || user.role === "admin" || !book) return null;
-  if (!user.career) return "Tu cuenta no tiene una carrera asignada. No podés alquilar ejemplares.";
-  const bookCareer = book.career?.trim();
-  if (!bookCareer || bookCareer === "Todas las carreras") {
-    return "Este ejemplar es de formación general. Solo lo puede alquilar un administrador.";
-  }
-  if (bookCareer !== user.career) {
-    return `Este libro es de ${bookCareer}. Solo podés alquilar ejemplares de ${user.career}.`;
-  }
-  return null;
-}
 
 export const BookDetail = () => {
   const { id = "" } = useParams();
@@ -33,6 +21,7 @@ export const BookDetail = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loans, setLoans] = useState<LoanRecord[]>([]);
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -69,7 +58,6 @@ export const BookDetail = () => {
       .catch(() => setLoans([]));
   }, [user, id]);
 
-  const loanDenial = loanDenialMessage(user, book);
   const activeLoan = loans.find((loan) => loan.bookId === id && loan.status !== "returned") ?? null;
   const open = loans.filter((loan) => loan.status !== "returned");
   const policyBlock = !activeLoan && open.some((loan) => loan.status === "overdue")
@@ -86,8 +74,8 @@ export const BookDetail = () => {
       setNotice("No tenés permisos para alquilar este ejemplar.");
       return;
     }
-    if (loanDenial || (policyBlock && !activeLoan)) {
-      setNotice(loanDenial ?? policyBlock);
+    if (policyBlock && !activeLoan) {
+      setNotice(policyBlock);
       return;
     }
 
@@ -192,13 +180,13 @@ export const BookDetail = () => {
           </p>
         )}
 
-        {user && !loanDenial && (activeLoan || !policyBlock) && (
+        {user && (activeLoan || !policyBlock) && (
           <button type="button" className="btn mt-6" disabled={saving} onClick={handleLoan}>
             {saving ? "Guardando…" : activeLoan ? "Devolver" : "Alquilar"}
           </button>
         )}
 
-        {user && !loanDenial && policyBlock && !activeLoan && (
+        {user && policyBlock && !activeLoan && (
           <div className="mt-6 flex flex-col gap-3">
             <p className="alert">{policyBlock}</p>
             <Link to="/alquilados" className="text-sm font-medium text-brand-700">
@@ -207,13 +195,15 @@ export const BookDetail = () => {
           </div>
         )}
 
-        {user && loanDenial && (
-          <div className="mt-6 flex flex-col gap-3">
-            <p className="alert">{loanDenial}</p>
-            {user.career && (
-              <Link to={`/?career=${encodeURIComponent(user.career)}&faculty=${encodeURIComponent(user.faculty ?? "")}`} className="text-sm font-medium text-brand-700">
-                Ver los libros de {user.career}
-              </Link>
+        {user && user.role !== "admin" && (
+          <div className="mt-4">
+            <button type="button" className="btn-ghost text-sm" onClick={() => setRegisterOpen((open) => !open)}>
+              Registrar
+            </button>
+            {registerOpen && (
+              <div className="mt-4">
+                <RegisterBook embedded />
+              </div>
             )}
           </div>
         )}

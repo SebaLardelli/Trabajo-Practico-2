@@ -11,7 +11,7 @@ import { createBook } from "../services/books";
 const studentBookSchema = bookSchema.pick({ title: true, author: true, pages: true, publishedAt: true });
 type StudentBookValues = z.infer<typeof studentBookSchema>;
 
-export const RegisterBook = () => {
+export const RegisterBook = ({ embedded = false }: { embedded?: boolean }) => {
   const { data: session } = useSession();
   const career = session?.user.career ?? "";
   const faculty = session?.user.faculty ?? "";
@@ -30,8 +30,8 @@ export const RegisterBook = () => {
   if (!career) {
     return (
       <section className="panel max-w-lg p-6">
-        <h1 className="text-3xl font-semibold tracking-tight">Registrar libro</h1>
-        <p className="mt-3 text-sm text-muted">Tu cuenta no tiene una carrera asignada. Volvé a registrarte eligiendo una.</p>
+        {!embedded && <h1 className="text-3xl font-semibold tracking-tight">Registrar libro</h1>}
+        <p className={`${embedded ? "" : "mt-3"} text-sm text-muted`}>Tu cuenta no tiene una carrera asignada. Volvé a registrarte eligiendo una.</p>
       </section>
     );
   }
@@ -47,9 +47,9 @@ export const RegisterBook = () => {
   };
 
   return (
-    <section className="mx-auto max-w-lg">
-      <h1 className="text-3xl font-semibold tracking-tight">Registrar libro</h1>
-      <p className="mt-2 mb-6 text-sm text-muted">
+    <section className={embedded ? "" : "mx-auto max-w-lg"}>
+      {!embedded && <h1 className="text-3xl font-semibold tracking-tight">Registrar libro</h1>}
+      <p className={`${embedded ? "mb-4" : "mt-2 mb-6"} text-sm text-muted`}>
         Queda en el estante de <span className="font-medium text-ink">{career}</span>. No se pueden cargar libros de otra carrera.
       </p>
       {done && (

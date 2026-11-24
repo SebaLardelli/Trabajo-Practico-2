@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AdminNav } from "../components/AdminNav";
 import { BookForm } from "../components/BookForm";
+import { filterDemoBooks } from "../data/catalog";
 import { getErrorMessage } from "../lib/api";
 import type { BookFormValues } from "../schemas/book.schema";
 import { loanSummary } from "../services/loans";
@@ -13,11 +14,24 @@ export const Admin = () => {
   const [editing, setEditing] = useState<Book | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<LoanSummary | null>(null);
+  const [fromPage, setFromPage] = useState(false);
 
   const load = async () => {
-    const [result, stock] = await Promise.all([listBooks({ page: 1, limit: 100 }), loanSummary().catch(() => null)]);
-    setBooks(result.data);
+    const [first, stock] = await Promise.all([listBooks({ page: 1, limit: 100 }), loanSummary().catch(() => null)]);
+    if (first.meta.total === 0) {
+      setBooks(filterDemoBooks({ page: 1, limit: 500 }).data);
+      setSummary(null);
+      setFromPage(true);
+      return;
+    }
+    const loaded = [...first.data];
+    for (let page = 2; page <= first.meta.totalPages; page += 1) {
+      const next = await listBooks({ page, limit: 100 });
+      loaded.push(...next.data);
+    }
+    setBooks(loaded);
     setSummary(stock);
+    setFromPage(false);
   };
 
   useEffect(() => {
@@ -25,6 +39,10 @@ export const Admin = () => {
   }, []);
 
   const handleSave = async (values: BookFormValues) => {
+    if (editing?._id.startsWith("demo-")) {
+      setError("Estos libros son los que se ven en el inicio. Se pueden editar cuando quedan guardados en la base.");
+      return;
+    }
     if (editing) {
       await updateBook(editing._id, values);
       setEditing(null);
@@ -35,6 +53,10 @@ export const Admin = () => {
   };
 
   const handleDelete = async (book: Book) => {
+    if (book._id.startsWith("demo-")) {
+      setError("Estos libros son los que se ven en el inicio. Se pueden eliminar cuando quedan guardados en la base.");
+      return;
+    }
     if (!window.confirm(`¿Eliminar ${book.title}?`)) return;
     try {
       await deleteBook(book._id);
@@ -53,8 +75,9 @@ export const Admin = () => {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Libros</h1>
         <p className="mt-2 mb-4 text-sm text-muted">
-          Cargá títulos y la cantidad de ejemplares.
-          {summary ? ` Hay ${summary.copies} ejemplares, ${summary.inRoom} en sala y ${summary.onLoan} prestados.` : ""}
+          {fromPage
+            ? "Este listado es el mismo catálogo que se ve en el inicio."
+            : `Cargá títulos y la cantidad de ejemplares.${summary ? ` Hay ${summary.copies} ejemplares, ${summary.inRoom} en sala y ${summary.onLoan} prestados.` : ""}`}
         </p>
         {error && <p className="mb-4 alert">{error}</p>}
         <ul className="flex flex-col gap-3">

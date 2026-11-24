@@ -7,6 +7,8 @@ import loansRouter from "./routes/loans.routes.js";
 import noticesRouter from "./routes/notices.routes.js";
 import { connectMongoDB } from "./config/db.js";
 import { ensureFixedAdmin } from "./lib/fixed-admin.js";
+import { seedLibrary } from "./lib/seed-library.js";
+import Book from "./models/Book.js";
 
 const app = express();
 const PORT: number = Number(process.env.PORT) || 3000;
@@ -42,6 +44,11 @@ app.get("/health", (_req: Request, res: Response) => {
 async function startServer(): Promise<void> {
   await connectMongoDB();
   await ensureFixedAdmin();
+  const storedBooks = await Book.countDocuments();
+  if (storedBooks === 0) {
+    const created = await seedLibrary();
+    console.log(`[server] catalogo cargado: ${created} libros`);
+  }
 
   app.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);

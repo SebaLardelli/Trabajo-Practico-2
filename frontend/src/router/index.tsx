@@ -12,7 +12,6 @@ import { ForgotPassword } from "../pages/ForgotPassword";
 import { Login } from "../pages/Login";
 import { NotFound } from "../pages/NotFound";
 import { Register } from "../pages/Register";
-import { RegisterBook } from "../pages/RegisterBook";
 import { ResetPassword } from "../pages/ResetPassword";
 import { Users } from "../pages/Users";
 import { ProtectedRoute } from "./ProtectedRoute";
@@ -33,7 +32,6 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
-          { path: "registrar", element: <RegisterBook /> },
           { path: "alquilados", element: <MyLoans /> },
           { path: "mis-prestamos", element: <MyLoans /> },
           { path: "avisos", element: <Notices /> },

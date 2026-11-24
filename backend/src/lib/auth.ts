@@ -23,6 +23,7 @@ export const auth = betterAuth({
   // URL publica que ve el navegador: la del FRONT, porque /api llega al back a traves del proxy.
   // El secret se lee solo de BETTER_AUTH_SECRET.
   baseURL: requireEnv("BETTER_AUTH_URL"),
+  trustedOrigins: ["http://localhost:5173", "https://trabajo-practico-2-1.onrender.com"],
   database: mongodbAdapter(client.db(), { client }),
   user: {
     additionalFields: {

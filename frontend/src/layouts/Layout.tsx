@@ -54,11 +54,6 @@ export const Layout = () => {
           Alquilados
         </NavLink>
       )}
-      {user && !isAdmin && (
-        <NavLink to="/registrar" className={linkClass}>
-          Registrar
-        </NavLink>
-      )}
       {isAdmin && (
         <NavLink to="/admin" className={linkClass}>
           Panel
@@ -68,8 +63,8 @@ export const Layout = () => {
   );
 
   const actions = user ? (
-    <button type="button" onClick={handleLogout} className="btn-ghost text-sm">
-      Salir · {user.name}
+    <button type="button" onClick={handleLogout} className="w-fit justify-self-start px-1 py-1 text-xs font-medium text-muted hover:text-ink">
+      Salir
     </button>
   ) : (
     <>

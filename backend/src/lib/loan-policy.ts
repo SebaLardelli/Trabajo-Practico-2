@@ -40,19 +40,6 @@ export interface LoanView {
   status: ILoanDocument["status"];
 }
 
-function careerBlock(reader: Reader, bookCareer: string | undefined, actorIsAdmin: boolean): string | null {
-  if (actorIsAdmin) return null;
-  if (!reader.career) return "Tu cuenta no tiene una carrera asignada. No podés alquilar ejemplares.";
-  const career = bookCareer?.trim();
-  if (!career || career === "Todas las carreras") {
-    return "Este ejemplar es de formación general. Solo lo puede alquilar un administrador.";
-  }
-  if (career !== reader.career) {
-    return `Este libro es de ${career}. Solo podés alquilar ejemplares de ${reader.career}.`;
-  }
-  return null;
-}
-
 async function notify(loan: ILoanDocument, kind: NoticeKind, title: string, body: string): Promise<void> {
   await Notice.create({ userId: loan.userId, kind, title, body, loanId: loan._id });
   try {
@@ -141,9 +128,6 @@ export async function borrowBook(input: {
   if (!isValidObjectId(input.bookId)) throw new LoanError(400, "El id no es valido");
   const book = await Book.findById(input.bookId);
   if (!book) throw new LoanError(404, "Libro no encontrado");
-
-  const blocked = careerBlock(input.reader, book.career, input.actorIsAdmin);
-  if (blocked) throw new LoanError(403, blocked);
 
   await refreshOverdue();
   const open = await Loan.find({ userId: input.reader.id, returnedAt: null });
