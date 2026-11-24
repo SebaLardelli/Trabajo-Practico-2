@@ -92,22 +92,50 @@ export async function refreshStock(bookId: string): Promise<void> {
 }
 
 export async function reconcileStock(): Promise<void> {
-  const books = await Book.find().select("_id copies");
-  for (const book of books) {
-    await refreshStock(String(book._id));
-  }
+  const [books, counts] = await Promise.all([
+    Book.find().select("_id copies"),
+    Loan.aggregate<{ _id: mongoose.Types.ObjectId; onLoan: number }>([
+      { $match: { returnedAt: null } },
+      { $group: { _id: "$book", onLoan: { $sum: 1 } } },
+    ]),
+  ]);
+  const onLoanByBook = new Map(counts.map((row) => [String(row._id), row.onLoan]));
+  if (books.length === 0) return;
+  await Book.bulkWrite(
+    books.map((book) => {
+      const copies = Math.max(0, book.copies ?? 0);
+      const onLoan = onLoanByBook.get(String(book._id)) ?? 0;
+      return {
+        updateOne: {
+          filter: { _id: book._id },
+          update: { $set: { copies, onLoan, available: copies > 0 && onLoan < copies } },
+        },
+      };
+    }),
+  );
+}
+
+let notifyingOverdue = false;
+
+async function notifyPendingOverdue(): Promise<void> {
+  const today = parseDay(todayKey());
+  const loans = await Loan.find({ returnedAt: null, dueDate: { $lt: today }, overdueNotifiedAt: null }).limit(20);
+  for (const loan of loans) await notifyOverdue(loan);
 }
 
 export async function refreshOverdue(): Promise<void> {
   const today = parseDay(todayKey());
-  const loans = await Loan.find({ returnedAt: null, dueDate: { $lt: today } });
-  for (const loan of loans) {
-    if (loan.status !== "overdue") {
-      loan.status = "overdue";
-      await loan.save();
-    }
-    await notifyOverdue(loan);
-  }
+  await Loan.updateMany(
+    { returnedAt: null, dueDate: { $lt: today }, status: { $ne: "overdue" } },
+    { $set: { status: "overdue" } },
+  );
+  if (notifyingOverdue) return;
+  notifyingOverdue = true;
+  void notifyPendingOverdue()
+    .catch((error: unknown) => console.error("[loans] no se pudieron avisar los vencidos:", error))
+    .finally(() => {
+      notifyingOverdue = false;
+    });
 }
 
 export async function findReader(userId: string): Promise<Reader | null> {

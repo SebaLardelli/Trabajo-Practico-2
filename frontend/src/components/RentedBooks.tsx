@@ -18,24 +18,29 @@ function statusLabel(status: LoanRecord["status"]): string {
   return "Alquilado";
 }
 
+function sorted(loans: LoanRecord[]): LoanRecord[] {
+  return [...loans].sort((a, b) => rank(a.status) - rank(b.status));
+}
+
 export const RentedBooks = ({ variant }: { variant: "page" | "home" }) => {
-  const [loans, setLoans] = useState<LoanRecord[]>([]);
+  const [loans, setLoans] = useState<LoanRecord[]>(() => sorted(demoLoans()));
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
+  const [syncing, setSyncing] = useState(true);
 
   const load = async () => {
-    const local = demoLoans();
+    const local = sorted(demoLoans());
+    setSyncing(true);
     try {
       const remote = await listMyLoans();
-      setLoans([...remote, ...local].sort((a, b) => rank(a.status) - rank(b.status)));
+      setLoans(sorted([...remote, ...local]));
       setError(null);
     } catch {
-      setLoans(local.sort((a, b) => rank(a.status) - rank(b.status)));
+      setLoans(local);
       setError(local.length === 0 ? "No se pudo leer el listado en el servidor." : null);
     } finally {
-      setReady(true);
+      setSyncing(false);
     }
   };
 
@@ -64,7 +69,6 @@ export const RentedBooks = ({ variant }: { variant: "page" | "home" }) => {
   };
 
   const visible = variant === "home" ? loans.filter((loan) => loan.status !== "returned") : loans;
-  if (!ready) return variant === "page" ? <div className="skeleton h-40" aria-busy="true" /> : null;
 
   return (
     <section className={variant === "home" ? "panel p-5" : ""}>
@@ -86,7 +90,7 @@ export const RentedBooks = ({ variant }: { variant: "page" | "home" }) => {
       {variant === "page" && error && <p className="alert mt-4">{error}</p>}
       {notice && <p className="alert-ok mt-4">{notice}</p>}
       {visible.length === 0 ? (
-        <p className="mt-6 text-muted">Todavía no pediste ningún libro.</p>
+        <p className="mt-6 text-muted">{syncing ? "Buscando tus préstamos…" : "Todavía no pediste ningún libro."}</p>
       ) : (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">

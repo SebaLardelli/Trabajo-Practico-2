@@ -42,8 +42,7 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
-async function startServer(): Promise<void> {
-  await connectMongoDB();
+async function prepareLibrary(): Promise<void> {
   await ensureFixedAdmin();
   const storedBooks = await Book.countDocuments();
   if (storedBooks === 0) {
@@ -51,9 +50,15 @@ async function startServer(): Promise<void> {
     console.log(`[server] catalogo cargado: ${created} libros`);
   }
   await reconcileStock();
+}
 
+async function startServer(): Promise<void> {
+  await connectMongoDB();
   app.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);
+  });
+  void prepareLibrary().catch((error: unknown) => {
+    console.error("[server] no se pudo preparar el catalogo:", error);
   });
 }
 
