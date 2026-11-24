@@ -59,6 +59,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 | `GITHUB_CLIENT_SECRET` | Client secret de la OAuth App de GitHub. |
 | `GOOGLE_CLIENT_ID` | Client ID del cliente OAuth de Google. Si falta, el servidor arranca y Google queda desactivado. |
 | `GOOGLE_CLIENT_SECRET` | Client secret del cliente OAuth de Google. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Correo de los avisos. Si quedan vacías, el aviso igual se guarda en la app. |
 
 Callback de GitHub: `{BETTER_AUTH_URL}/api/auth/callback/github`. Hacen falta dos OAuth Apps, una para local y otra para producción, porque GitHub acepta una sola callback por app.
 
@@ -116,7 +117,7 @@ El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informático
 
 ## Deploy en Render
 
-1. En Atlas, Network Access, permití `0.0.0.0/0` (cualquier IPv4 puede conectarse al cluster). Render no tiene IP fija.
+1. En Atlas, Network Access → Add IP Address → `0.0.0.0/0`. Las IPs de Render cambian, no se pueden listar.
 2. Backend, New → Web Service. Root Directory `backend`. Build: `npm install --include=dev && npm run build`. Start: `npm start`. Variables: `NODE_ENV=production`, `NODE_VERSION=22`, `MONGODB_URI`, un `BETTER_AUTH_SECRET` nuevo, `BETTER_AUTH_URL` con la URL del frontend, los GitHub de la OAuth App de producción, y `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 3. Frontend, New → Static Site. Root Directory `frontend`. Build: `npm install && npm run build`. Publish Directory `dist`. `NODE_VERSION=22`.
 4. Rewrites del Static Site, en este orden:
