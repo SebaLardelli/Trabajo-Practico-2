@@ -6,6 +6,10 @@ export interface IBook {
   pages: number;
   publishedAt: Date;
   available: boolean;
+  copies: number;
+  onLoan: number;
+  faculty: string;
+  career: string;
 }
 
 export interface IBookDocument extends IBook, Document {
@@ -38,6 +42,29 @@ const bookSchema = new Schema<IBookDocument>(
     available: {
       type: Boolean,
       default: true,
+    },
+    copies: {
+      type: Number,
+      default: 1,
+      min: [1, "Tiene que haber al menos 1 ejemplar"],
+      max: [99, "No se pueden cargar mas de 99 ejemplares"],
+    },
+    onLoan: {
+      type: Number,
+      default: 0,
+      min: [0, "Los prestamos no pueden ser negativos"],
+    },
+    faculty: {
+      type: String,
+      required: [true, "La facultad es obligatoria"],
+      trim: true,
+      maxlength: [80, "La facultad no puede superar 80 caracteres"],
+    },
+    career: {
+      type: String,
+      required: [true, "La carrera es obligatoria"],
+      trim: true,
+      maxlength: [140, "La carrera no puede superar 140 caracteres"],
     },
   },
   { timestamps: true },

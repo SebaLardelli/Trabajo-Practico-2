@@ -1,62 +1,32 @@
 import "dotenv/config";
 import mongoose from "mongoose";
-import { auth } from "../lib/auth.js";
 import { connectMongoDB, disconnectMongoDB } from "../config/db.js";
+import { libraryBooks } from "../data/library.js";
+import { ensureFixedAdmin } from "../lib/fixed-admin.js";
 import Book from "../models/Book.js";
-
-const accounts = [
-  { name: "Admin", email: "admin@biblioteca.test", password: "Admin1234!", role: "admin" },
-  { name: "Usuario", email: "user@biblioteca.test", password: "User1234!", role: "user" },
-] as const;
-
-async function ensureAccount(account: (typeof accounts)[number]): Promise<void> {
-  try {
-    await auth.api.signUpEmail({
-      body: { name: account.name, email: account.email, password: account.password },
-    });
-    console.log(`[seed] cuenta creada: ${account.email}`);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "ya existia";
-    console.log(`[seed] ${account.email}: ${message}`);
-  }
-
-  const db = mongoose.connection.db;
-  if (!db) throw new Error("Mongo no esta conectado");
-
-  const result = await db.collection("user").updateOne({ email: account.email }, { $set: { role: account.role } });
-  if (result.matchedCount === 0) {
-    throw new Error(`No se encontro el usuario ${account.email} para asignarle el rol`);
-  }
-  console.log(`[seed] rol ${account.role} en ${account.email}`);
-}
 
 async function main(): Promise<void> {
   await connectMongoDB();
+  await ensureFixedAdmin();
 
-  for (const account of accounts) {
-    await ensureAccount(account);
-  }
-
-  const count = await Book.countDocuments();
-  if (count === 0) {
-    await Book.create([
+  let created = 0;
+  for (const book of libraryBooks) {
+    const result = await Book.updateOne(
+      { title: book.title, career: book.career },
       {
-        title: "El Aleph",
-        author: "Jorge Luis Borges",
-        pages: 192,
-        publishedAt: new Date("1949-06-01"),
-        available: true,
+        $setOnInsert: {
+          ...book,
+          copies: 2,
+          onLoan: 0,
+          publishedAt: new Date(book.publishedAt),
+        },
       },
-      {
-        title: "Rayuela",
-        author: "Julio Cortazar",
-        pages: 600,
-        publishedAt: new Date("1963-06-28"),
-        available: false,
-      },
-    ]);
-    console.log("[seed] dos libros de ejemplo creados");
+      { upsert: true },
+    );
+    if (result.upsertedCount > 0) created += 1;
   }
+  await Book.updateMany({ copies: { $exists: false } }, { $set: { copies: 2, onLoan: 0, available: true } });
+  console.log(`[seed] catalogo UAI: ${created} libros nuevos, ${libraryBooks.length} en total`);
 
   await disconnectMongoDB();
 }

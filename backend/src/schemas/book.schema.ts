@@ -14,6 +14,18 @@ export const listBooksQuerySchema = z.object({
     .optional()
     .transform((value) => value || undefined),
   available: z.enum(["true", "false"]).optional(),
+  faculty: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .transform((value) => value || undefined),
+  career: z
+    .string()
+    .trim()
+    .max(140)
+    .optional()
+    .transform((value) => value || undefined),
 });
 
 export const createBookSchema = z.object({
@@ -22,10 +34,18 @@ export const createBookSchema = z.object({
   pages: z.coerce.number().int().min(1, { error: "El libro tiene que tener al menos 1 pagina" }).max(20000),
   publishedAt,
   available: z.boolean().default(true),
+  copies: z.coerce.number().int().min(1, { error: "Tiene que haber al menos 1 ejemplar" }).max(99).default(1),
+  faculty: z.string().trim().min(1, { error: "La facultad es obligatoria" }).max(80),
+  career: z.string().trim().min(1, { error: "La carrera es obligatoria" }).max(140),
 });
 
 export const updateBookSchema = createBookSchema.partial();
 
+export const loanBookSchema = z.object({
+  available: z.boolean(),
+});
+
 export type ListBooksQuery = z.infer<typeof listBooksQuerySchema>;
 export type CreateBookInput = z.infer<typeof createBookSchema>;
 export type UpdateBookInput = z.infer<typeof updateBookSchema>;
+export type LoanBookInput = z.infer<typeof loanBookSchema>;

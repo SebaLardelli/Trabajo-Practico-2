@@ -20,12 +20,12 @@ export const ThemeToggle = ({ className = "" }: { className?: string }) => {
   };
 
   return (
-    <div className={`flex rounded-full bg-paper/80 p-1 ${className}`} role="group" aria-label="Tema">
+    <div className={`flex rounded-full border border-line bg-field p-1 ${className}`} role="group" aria-label="Tema">
       <button
         type="button"
         aria-pressed={theme === "light"}
         onClick={() => choose("light")}
-        className={`rounded-full px-3 py-1.5 text-sm ${theme === "light" ? "bg-accent text-on-accent" : "text-ink/70"}`}
+        className={`rounded-full px-3 py-1.5 text-sm font-medium ${theme === "light" ? "bg-accent text-on-accent" : "text-muted"}`}
       >
         Claro
       </button>
@@ -33,7 +33,7 @@ export const ThemeToggle = ({ className = "" }: { className?: string }) => {
         type="button"
         aria-pressed={theme === "dark"}
         onClick={() => choose("dark")}
-        className={`rounded-full px-3 py-1.5 text-sm ${theme === "dark" ? "bg-accent text-on-accent" : "text-ink/70"}`}
+        className={`rounded-full px-3 py-1.5 text-sm font-medium ${theme === "dark" ? "bg-accent text-on-accent" : "text-muted"}`}
       >
         Oscuro
       </button>

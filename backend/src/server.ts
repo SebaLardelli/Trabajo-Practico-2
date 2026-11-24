@@ -3,7 +3,10 @@ import express, { Request, Response } from "express";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import booksRouter from "./routes/books.routes.js";
+import loansRouter from "./routes/loans.routes.js";
+import noticesRouter from "./routes/notices.routes.js";
 import { connectMongoDB } from "./config/db.js";
+import { ensureFixedAdmin } from "./lib/fixed-admin.js";
 
 const app = express();
 const PORT: number = Number(process.env.PORT) || 3000;
@@ -19,6 +22,8 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 
 app.use("/api/books", booksRouter);
+app.use("/api/loans", loansRouter);
+app.use("/api/notices", noticesRouter);
 
 if (NODE_ENV === "development") {
   app.get("/", (_req: Request, res: Response) => {
@@ -36,6 +41,7 @@ app.get("/health", (_req: Request, res: Response) => {
 
 async function startServer(): Promise<void> {
   await connectMongoDB();
+  await ensureFixedAdmin();
 
   app.listen(PORT, () => {
     console.log(`listening on port ${PORT}`);

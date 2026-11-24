@@ -5,6 +5,10 @@ export interface Book {
   pages: number;
   publishedAt: string;
   available: boolean;
+  copies?: number;
+  onLoan?: number;
+  faculty?: string;
+  career?: string;
   createdAt: string;
   updatedAt: string;
 }

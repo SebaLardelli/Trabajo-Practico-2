@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Link, Navigate, useNavigate } from "react-router";
-import { ThemeToggle } from "../components/ThemeToggle";
-import { signIn, signUp, useSession } from "../lib/auth-client";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
+import { GitHubIcon, GoogleIcon } from "../components/BrandIcons";
+import { UaiMark } from "../components/UaiMark";
+import { CAREERS, FACULTIES } from "../data/uai";
+import { signIn, signUp, useSession, type SocialProvider } from "../lib/auth-client";
 import { registerSchema, type RegisterFormValues } from "../schemas/auth.schema";
 
 export const Register = () => {
@@ -12,18 +15,50 @@ export const Register = () => {
     register,
     handleSubmit,
     setError,
+    getValues,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "", career: "" },
   });
+
+  const [socialError, setSocialError] = useState<string | null>(null);
+  const [params] = useSearchParams();
+  const socialReturnedError = params.get("error");
+  const arrivedWithoutAccount = params.get("alta") === "1";
+  const arrivedProvider = params.get("provider") === "google" ? "Google" : params.get("provider") === "github" ? "GitHub" : null;
+  const careerReady = CAREERS.some((item) => item.name === watch("career"));
 
   if (session && !isSubmitting) {
     return <Navigate to="/" replace />;
   }
 
+  const handleSocial = async (provider: SocialProvider) => {
+    setSocialError(null);
+    const career = CAREERS.find((item) => item.name === getValues("career"));
+    if (!career) {
+      setError("career", { message: "Elegí tu carrera" });
+      setSocialError("Elegí tu carrera para registrarte con GitHub o Google.");
+      return;
+    }
+    const { error } = await signIn.social({
+      provider,
+      callbackURL: "/",
+      errorCallbackURL: `/register?provider=${provider}`,
+      requestSignUp: true,
+      additionalData: { career: career.name, faculty: career.faculty },
+    });
+    if (error) setSocialError(error.message ?? "No se pudo crear la cuenta");
+  };
+
   const onSubmit = async (values: RegisterFormValues) => {
-    const { error } = await signUp.email(values);
+    const career = CAREERS.find((item) => item.name === values.career);
+    if (!career) {
+      setError("career", { message: "Elegí tu carrera" });
+      return;
+    }
+    const { error } = await signUp.email({ ...values, faculty: career.faculty });
     if (error) {
       setError("root.server", { message: error.message ?? "No se pudo crear la cuenta" });
       return;
@@ -32,12 +67,24 @@ export const Register = () => {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center p-6 font-sans">
-      <ThemeToggle className="absolute top-6 right-6" />
+    <main className="flex min-h-screen items-center justify-center p-6 font-sans">
       <section className="panel w-full max-w-md p-8">
-        <p className="text-xs font-medium tracking-[0.18em] text-brand-700 uppercase">Biblioteca</p>
-        <h1 className="mt-2 font-serif text-4xl">Crear cuenta</h1>
-        <p className="mt-2 mb-6 text-sm text-ink/60">La cuenta nueva entra como usuario y solo puede leer el catálogo.</p>
+        <div className="mb-6 flex items-center gap-3">
+          <UaiMark className="h-11 w-11" />
+          <div>
+            <p className="text-sm text-muted">Biblioteca UAI</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Crear cuenta</h1>
+          </div>
+        </div>
+        {arrivedWithoutAccount && arrivedProvider && (
+          <p className="mb-6 flex items-start gap-2 text-sm font-semibold text-accent">
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 fill-accent">
+              <path d="M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6Zm0 14.2a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Zm1.05-2.15h-2.1l-.35-7.3h2.8l-.35 7.3Z" />
+            </svg>
+            No hay una cuenta de {arrivedProvider}. Elegí la carrera y registrate con {arrivedProvider}.
+          </p>
+        )}
+        <p className="mb-6 text-sm text-muted">Elegí la carrera. Vale para el email y también para GitHub o Google.</p>
         <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Nombre
@@ -48,6 +95,22 @@ export const Register = () => {
             Email
             <input type="email" autoComplete="email" className="field font-normal" {...register("email")} />
             {errors.email && <span className="field-error">{errors.email.message}</span>}
+          </label>
+          <label className="flex flex-col gap-1.5 text-sm font-medium">
+            Carrera
+            <select className="field font-normal" {...register("career")}>
+              <option value="">Elegí tu carrera</option>
+              {FACULTIES.map((faculty) => (
+                <optgroup key={faculty} label={faculty}>
+                  {CAREERS.filter((item) => item.faculty === faculty).map((item) => (
+                    <option key={item.name} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            {errors.career && <span className="field-error">{errors.career.message}</span>}
           </label>
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Contraseña
@@ -65,14 +128,37 @@ export const Register = () => {
         </form>
         <button
           type="button"
-          onClick={() => void signIn.social({ provider: "github", callbackURL: "/", errorCallbackURL: "/login" })}
-          className="btn-ghost mt-3 w-full"
+          disabled={!careerReady}
+          onClick={() => void handleSocial("github")}
+          className="btn-ghost mt-3 inline-flex w-full items-center justify-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-50"
         >
+          <GitHubIcon />
           Registrarme con GitHub
         </button>
-        <p className="mt-6 text-center text-sm text-ink/60">
+        <button
+          type="button"
+          disabled={!careerReady}
+          onClick={() => void handleSocial("google")}
+          className="btn-ghost mt-2 inline-flex w-full items-center justify-center gap-2.5 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <GoogleIcon />
+          Registrarme con Google
+        </button>
+        {!careerReady && (
+          <p className="mt-3 flex items-center justify-center gap-2 text-center text-sm font-semibold text-accent">
+            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 shrink-0 fill-accent">
+              <path d="M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6Zm0 14.2a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3Zm1.05-2.15h-2.1l-.35-7.3h2.8l-.35 7.3Z" />
+            </svg>
+            ¡Elegí la carrera para habilitar GitHub y Google!
+          </p>
+        )}
+        {socialReturnedError && !socialError && (
+          <p className="alert mt-3">No se pudo crear la cuenta. Elegí la carrera y volvé a intentar.</p>
+        )}
+        {socialError && <p className="alert mt-3">{socialError}</p>}
+        <p className="mt-6 text-center text-sm text-muted">
           ¿Ya tenés cuenta?{" "}
-          <Link to="/login" className="font-medium text-brand-700 underline">
+          <Link to="/login" className="font-medium text-brand-700">
             Ingresar
           </Link>
         </p>

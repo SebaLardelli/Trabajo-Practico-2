@@ -7,12 +7,16 @@ export interface ListBooksParams {
   limit?: number;
   search?: string;
   available?: "true" | "false";
+  faculty?: string;
+  career?: string;
 }
 
 export async function listBooks(params: ListBooksParams): Promise<BookList> {
   const query: Record<string, string | number> = { page: params.page ?? 1, limit: params.limit ?? 8 };
   if (params.search) query.search = params.search;
   if (params.available) query.available = params.available;
+  if (params.faculty) query.faculty = params.faculty;
+  if (params.career) query.career = params.career;
   const { data } = await api.get<BookList>("/books", { params: query });
   return data;
 }
@@ -24,6 +28,11 @@ export async function getBook(id: string): Promise<Book> {
 
 export async function createBook(values: BookFormValues): Promise<Book> {
   const { data } = await api.post<Book>("/books", values);
+  return data;
+}
+
+export async function loanBook(id: string, available: boolean): Promise<Book> {
+  const { data } = await api.patch<Book>(`/books/${id}/loan`, { available });
   return data;
 }
 

@@ -1,6 +1,6 @@
-# Biblioteca
+# Biblioteca UAI
 
-Catálogo de libros. El backend expone un CRUD en `/api/books` y Better Auth guarda usuarios y sesiones en MongoDB. El frontend es un sitio estático de React que habla con la API por `/api` (proxy de Vite en local, rewrite de Render en producción).
+Catálogo de la Biblioteca Central de la Universidad Abierta Interamericana. El backend expone un CRUD en `/api/books` y Better Auth guarda usuarios y sesiones en MongoDB. El frontend es un sitio estático de React que habla con la API por `/api` (proxy de Vite en local, rewrite de Render en producción).
 
 La entidad es **libro**, con título (texto), autor (texto), páginas (número), fecha de publicación (fecha) y disponible (booleano).
 
@@ -8,14 +8,12 @@ La entidad es **libro**, con título (texto), autor (texto), páginas (número),
 
 | Servicio | URL |
 |---|---|
-| Frontend (Render Static Site) | https://TU-FRONTEND.onrender.com |
-| Backend (Render Web Service) | https://TU-BACKEND.onrender.com |
-
-Reemplazar las dos URLs después de desplegar.
+| Frontend (Render Static Site) | https://trabajo-practico-2-1.onrender.com |
+| Backend (Render Web Service) | https://trabajo-practico-2.onrender.com |
 
 ## Cómo correrlo en local
 
-Hacen falta Node 22, una base en MongoDB Atlas y una OAuth App de GitHub para el login social.
+Hacen falta Node 22, una base en MongoDB Atlas, una OAuth App de GitHub y un cliente OAuth de Google para el login social.
 
 ```bash
 cd backend
@@ -35,14 +33,14 @@ npm run dev
 
 Entrar siempre por http://localhost:5173. El frontend no tiene `.env`: llama a `/api` y Vite lo reenvía a `http://localhost:3000`.
 
-Usuarios de prueba (después de tener la URI real):
+Al arrancar, el backend deja fija la cuenta de administrador. El catálogo de ejemplo se carga aparte:
 
 ```bash
 cd backend
 npm run seed
 ```
 
-Eso crea las dos cuentas y, si la colección está vacía, dos libros de ejemplo. El secret se genera con:
+El secret se genera con:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
@@ -57,10 +55,14 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 | `MONGODB_URI` | URI de Atlas, con usuario, contraseña y nombre de base. No se commitea. |
 | `BETTER_AUTH_SECRET` | Firma las cookies de sesión. Uno distinto por entorno, mínimo 32 caracteres. |
 | `BETTER_AUTH_URL` | URL pública del **frontend**. Local: `http://localhost:5173`. |
-| `GITHUB_CLIENT_ID` | Client ID de la OAuth App. |
-| `GITHUB_CLIENT_SECRET` | Client secret de la OAuth App. |
+| `GITHUB_CLIENT_ID` | Client ID de la OAuth App de GitHub. |
+| `GITHUB_CLIENT_SECRET` | Client secret de la OAuth App de GitHub. |
+| `GOOGLE_CLIENT_ID` | Client ID del cliente OAuth de Google. Si falta, el servidor arranca y Google queda desactivado. |
+| `GOOGLE_CLIENT_SECRET` | Client secret del cliente OAuth de Google. |
 
 Callback de GitHub: `{BETTER_AUTH_URL}/api/auth/callback/github`. Hacen falta dos OAuth Apps, una para local y otra para producción, porque GitHub acepta una sola callback por app.
+
+Callback de Google: `{BETTER_AUTH_URL}/api/auth/callback/google`. Un solo cliente de Google alcanza para local y producción: acepta varias redirect URI.
 
 ## Endpoints
 
@@ -68,44 +70,61 @@ Callback de GitHub: `{BETTER_AUTH_URL}/api/auth/callback/github`. Hacen falta do
 |---|---|---|
 | GET | `/api/books` | público |
 | GET | `/api/books/:id` | público |
-| POST | `/api/books` | admin |
+| POST | `/api/books` | sesión. El alumno solo puede cargar libros de su carrera; el admin, de cualquiera |
 | PUT | `/api/books/:id` | admin |
 | PATCH | `/api/books/:id` | admin |
 | DELETE | `/api/books/:id` | admin |
+| PATCH | `/api/books/:id/loan` | sesión, con las reglas de préstamo |
+| GET | `/api/loans` | admin |
+| GET | `/api/loans/mine` | sesión |
+| POST | `/api/loans` | sesión. El admin puede asignarlo a otro lector |
+| PATCH | `/api/loans/:id` | admin (fechas) |
+| POST | `/api/loans/:id/return` | dueño del préstamo o admin |
+| GET | `/api/notices` | sesión |
 | POST | `/api/auth/sign-up/email` | público |
 | POST | `/api/auth/sign-in/email` | público |
 | POST | `/api/auth/sign-in/social` | público |
 | GET | `/api/auth/callback/github` | público (OAuth) |
+| GET | `/api/auth/callback/google` | público (OAuth) |
 | GET | `/api/auth/get-session` | público |
 | POST | `/api/auth/sign-out` | sesión |
 | POST | `/api/auth/admin/set-role` | admin |
 
-`GET /api/books` acepta `search`, `available` (`true` o `false`), `page` y `limit`.
+`GET /api/books` acepta `search`, `available` (`true` o `false`), `faculty`, `career`, `page` y `limit`.
 
-Un usuario recién registrado recibe el rol `user` y solo puede leer. Crear, editar y eliminar exige sesión de admin (`authMiddleware` + `requireRole("admin")`). Sin sesión las rutas de escritura responden 401; con sesión y sin rol, 403. Crear responde 201. Si el libro no existe, 404. Si Zod rechaza el body, 400.
+Editar y eliminar un libro es solo del admin. Crear responde 201. Sin sesión, 401. Sin permiso, 403. Si el libro no existe, 404. Si Zod rechaza el body, 400.
 
-## Usuarios de prueba
+Un alumno puede retirar hasta 3 libros, y solo de su carrera. Si tiene uno vencido, no puede pedir otro hasta devolverlo. Esos movimientos quedan en `/api/loans` y los avisos en `/api/notices`.
+
+## Quién entra
+
+El administrador está fijo. No se registra y no se le puede sacar el rol. Al iniciar sesión entra al panel (`/admin`), donde carga títulos, cantidades, préstamos y fechas.
 
 | Rol | Email | Contraseña |
 |---|---|---|
 | admin | admin@biblioteca.test | Admin1234! |
-| user | user@biblioteca.test | User1234! |
+| alumno | alumno@biblioteca.test | Alumno1234! |
 
-Si no se corre el seed, el primer admin se crea registrándose y editando en Atlas el documento de la colección `user`: `role` pasa de `"user"` a `"admin"`. Después hay que cerrar sesión y volver a entrar. Desde `/admin/usuarios` un admin puede cambiar el rol del resto.
+El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos y solo puede cargar y alquilar libros de esa carrera. Cualquier otro alumno se registra en **Registrarse**:
+
+1. Elige su carrera. Sin eso no se crea la cuenta, tampoco con GitHub o Google.
+2. Entra con el email y la contraseña que eligió, o con el mismo GitHub o Google.
+3. Puede registrar libros solo de esa carrera y alquilar solo esos ejemplares.
+4. En **Alquilados** ve el listado de los libros que pidió, con la fecha en que los retiró y la fecha límite. También le aparece un resumen arriba del catálogo. En **Avisos** ve el retiro, la devolución y si un libro está vencido.
 
 ## Deploy en Render
 
 1. En Atlas, Network Access → `0.0.0.0/0`.
-2. Backend, New → Web Service. Root Directory `backend`. Build: `npm install --include=dev && npm run build`. Start: `npm start`. Variables: `NODE_ENV=production`, `NODE_VERSION=22`, `MONGODB_URI`, un `BETTER_AUTH_SECRET` nuevo, `BETTER_AUTH_URL` con la URL del frontend, y los GitHub de la OAuth App de producción.
+2. Backend, New → Web Service. Root Directory `backend`. Build: `npm install --include=dev && npm run build`. Start: `npm start`. Variables: `NODE_ENV=production`, `NODE_VERSION=22`, `MONGODB_URI`, un `BETTER_AUTH_SECRET` nuevo, `BETTER_AUTH_URL` con la URL del frontend, los GitHub de la OAuth App de producción, y `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 3. Frontend, New → Static Site. Root Directory `frontend`. Build: `npm install && npm run build`. Publish Directory `dist`. `NODE_VERSION=22`.
 4. Rewrites del Static Site, en este orden:
 
 | Source | Destination | Action |
 |---|---|---|
-| `/api/*` | `https://TU-BACKEND.onrender.com/api/*` | Rewrite |
+| `/api/*` | `https://trabajo-practico-2.onrender.com/api/*` | Rewrite |
 | `/*` | `/index.html` | Rewrite |
 
-5. Verificar `https://TU-BACKEND.onrender.com/api/auth/ok` → `{ "ok": true }`.
+5. Verificar `https://trabajo-practico-2.onrender.com/api/auth/ok` → `{ "ok": true }`.
 6. Probar el login con GitHub desde la URL del frontend, no desde la del backend.
 
-El plan free duerme el backend a los 15 minutos. El primer request puede tardar cerca de un minuto.
+En el plan gratuito de Render el backend se apaga si pasa un rato sin visitas. La primera vez que alguien entra después puede tardar cerca de un minuto en cargar.
