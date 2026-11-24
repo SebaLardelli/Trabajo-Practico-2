@@ -116,7 +116,7 @@ El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informático
 
 ## Deploy en Render
 
-1. En Atlas, Network Access → `0.0.0.0/0`.
+1. En Atlas, Network Access, permití `0.0.0.0/0` (cualquier IPv4 puede conectarse al cluster). Render no tiene IP fija.
 2. Backend, New → Web Service. Root Directory `backend`. Build: `npm install --include=dev && npm run build`. Start: `npm start`. Variables: `NODE_ENV=production`, `NODE_VERSION=22`, `MONGODB_URI`, un `BETTER_AUTH_SECRET` nuevo, `BETTER_AUTH_URL` con la URL del frontend, los GitHub de la OAuth App de producción, y `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`.
 3. Frontend, New → Static Site. Root Directory `frontend`. Build: `npm install && npm run build`. Publish Directory `dist`. `NODE_VERSION=22`.
 4. Rewrites del Static Site, en este orden:

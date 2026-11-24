@@ -16,6 +16,34 @@ interface ListedSession {
   userAgent?: string | null;
 }
 
+function deviceLabel(agent: string): string {
+  const browser = /Edg\//.test(agent)
+    ? "Edge"
+    : /OPR\/|Opera/.test(agent)
+      ? "Opera"
+      : /Chrome\/|CriOS/.test(agent)
+        ? "Chrome"
+        : /Firefox\/|FxiOS/.test(agent)
+          ? "Firefox"
+          : /Safari\//.test(agent)
+            ? "Safari"
+            : "Otro navegador";
+  const device = /iPhone/.test(agent)
+    ? "un iPhone"
+    : /iPad/.test(agent)
+      ? "un iPad"
+      : /Android/.test(agent)
+        ? "un celular Android"
+        : /Windows/.test(agent)
+          ? "una computadora con Windows"
+          : /Mac OS/.test(agent)
+            ? "una Mac"
+            : /Linux/.test(agent)
+              ? "una computadora con Linux"
+              : "otro equipo";
+  return `${browser} en ${device}`;
+}
+
 function when(value: string | Date): string {
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
@@ -103,7 +131,7 @@ export const Sessions = () => {
                 Vence {when(session.expiresAt)}
                 {session.ipAddress ? ` · ${session.ipAddress}` : ""}
               </p>
-              {session.userAgent && <p className="mt-1 max-w-xl truncate text-xs text-muted">{session.userAgent}</p>}
+              {session.userAgent && <p className="mt-1 text-sm text-muted">{deviceLabel(session.userAgent)}</p>}
             </div>
             <button
               type="button"
