@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router";
+import { NavLink, Navigate, Outlet, useLocation } from "react-router";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { UaiMark } from "../components/UaiMark";
 import { signOut, useSession } from "../lib/auth-client";
@@ -19,14 +19,14 @@ export const Layout = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!user) {
+    if (!user || isAdmin) {
       setUnread(0);
       return;
     }
     unreadNotices()
       .then(setUnread)
       .catch(() => setUnread(0));
-  }, [user, location.pathname]);
+  }, [user, isAdmin, location.pathname]);
 
   useEffect(() => {
     setOpen(false);
@@ -41,7 +41,22 @@ export const Layout = () => {
     window.location.replace("/");
   };
 
-  const links = (
+  const links = isAdmin ? (
+    <>
+      <NavLink to="/admin" className={linkClass} end>
+        Libros
+      </NavLink>
+      <NavLink to="/admin/prestamos" className={linkClass}>
+        Préstamos
+      </NavLink>
+      <NavLink to="/admin/usuarios" className={linkClass}>
+        Lectores
+      </NavLink>
+      <NavLink to="/admin/sesiones" className={linkClass}>
+        Sesiones
+      </NavLink>
+    </>
+  ) : (
     <>
       <NavLink to="/" className={linkClass} end>
         Catálogo
@@ -52,11 +67,6 @@ export const Layout = () => {
       {user && (
         <NavLink to="/alquilados" className={linkClass}>
           Alquilados
-        </NavLink>
-      )}
-      {isAdmin && (
-        <NavLink to="/admin" className={linkClass}>
-          Panel
         </NavLink>
       )}
     </>
@@ -77,6 +87,10 @@ export const Layout = () => {
     </>
   );
 
+  if (isAdmin && !location.pathname.startsWith("/admin")) {
+    return <Navigate to="/admin" replace />;
+  }
+
   return (
     <div className="flex min-h-screen flex-col font-sans">
       <header className="fixed inset-x-0 top-0 z-40 bg-card">
@@ -88,13 +102,13 @@ export const Layout = () => {
         </div>
         <div className="border-b border-line">
           <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4">
-            <NavLink to="/" className="nav-pill flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink">
+            <NavLink to={isAdmin ? "/admin" : "/"} className="nav-pill flex min-w-0 items-center gap-2 font-semibold tracking-tight text-ink">
               <UaiMark />
               <span className="truncate">Biblioteca</span>
             </NavLink>
             <nav className="ml-2 hidden items-center gap-1 md:flex">{links}</nav>
             <div className="ml-auto hidden items-center gap-2 md:flex">
-              {user && <NoticeBell count={unread} />}
+              {user && !isAdmin && <NoticeBell count={unread} />}
               <ThemeToggle />
               {actions}
             </div>
@@ -117,7 +131,7 @@ export const Layout = () => {
             <div id="menu-principal" className="menu-in border-t border-line bg-card md:hidden">
               <div className="mx-auto flex w-full max-w-6xl flex-col gap-2 px-4 py-4">
                 <nav className="flex flex-col gap-1">{links}</nav>
-                {user && <NoticeBell count={unread} wide />}
+                {user && !isAdmin && <NoticeBell count={unread} wide />}
                 <ThemeToggle />
                 <div className="grid gap-2">{actions}</div>
               </div>

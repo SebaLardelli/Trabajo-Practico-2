@@ -100,7 +100,7 @@ Un alumno puede retirar hasta 3 libros, de cualquier carrera. Si tiene uno venci
 
 ## Quién entra
 
-El administrador está fijo. No se registra y no se le puede sacar el rol. Al iniciar sesión entra al panel (`/admin`), donde carga títulos, cantidades, préstamos y fechas.
+El administrador está fijo. No se registra y no se le puede sacar el rol. Al iniciar sesión entra al panel (`/admin`) y solo ve ese panel: libros, préstamos, lectores y sesiones. No usa el catálogo ni alquila.
 
 | Rol | Email | Contraseña |
 |---|---|---|
