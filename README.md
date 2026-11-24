@@ -106,9 +106,9 @@ El administrador está fijo. No se registra y no se le puede sacar el rol. Al in
 | Rol | Email | Contraseña |
 |---|---|---|
 | admin | admin@biblioteca.test | Admin1234! |
-| alumno | alumno@biblioteca.test | Alumno1234! |
+| user | alumno@biblioteca.test | Alumno1234! |
 
-El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos. Puede alquilar cualquier libro y no puede registrar títulos. Cualquier otro alumno se registra en **Registrarse**:
+Todo usuario que se registra recibe el rol `user` (en la app se lo llama "alumno"). El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos. Puede alquilar cualquier libro y no puede registrar títulos. Cualquier otro alumno se registra en **Registrarse**:
 
 1. Elige su carrera. Sin eso no se crea la cuenta, tampoco con GitHub o Google.
 2. Entra con el email y la contraseña que eligió, o con el mismo GitHub o Google.
