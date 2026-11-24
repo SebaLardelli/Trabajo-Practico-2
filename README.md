@@ -70,7 +70,7 @@ Callback de Google: `{BETTER_AUTH_URL}/api/auth/callback/google`. Un solo client
 |---|---|---|
 | GET | `/api/books` | público |
 | GET | `/api/books/:id` | público |
-| POST | `/api/books` | sesión. El alumno solo puede cargar libros de su carrera; el admin, de cualquiera |
+| POST | `/api/books` | admin |
 | PUT | `/api/books/:id` | admin |
 | PATCH | `/api/books/:id` | admin |
 | DELETE | `/api/books/:id` | admin |
@@ -94,7 +94,7 @@ Callback de Google: `{BETTER_AUTH_URL}/api/auth/callback/google`. Un solo client
 
 `GET /api/books` acepta `search`, `available` (`true` o `false`), `faculty`, `career`, `page` y `limit`.
 
-Editar y eliminar un libro es solo del admin. Crear responde 201. Sin sesión, 401. Sin permiso, 403. Si el libro no existe, 404. Si Zod rechaza el body, 400.
+Crear, editar y eliminar un libro es solo del admin. El alumno solo puede alquilar. Crear responde 201. Sin sesión, 401. Sin permiso, 403. Si el libro no existe, 404. Si Zod rechaza el body, 400.
 
 Un alumno puede retirar hasta 3 libros, de cualquier carrera. Si tiene uno vencido, no puede pedir otro hasta devolverlo. Esos movimientos quedan en `/api/loans` y los avisos en `/api/notices`.
 
@@ -107,11 +107,11 @@ El administrador está fijo. No se registra y no se le puede sacar el rol. Al in
 | admin | admin@biblioteca.test | Admin1234! |
 | alumno | alumno@biblioteca.test | Alumno1234! |
 
-El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos y puede cargar libros de esa carrera. Puede alquilar cualquier libro. Cualquier otro alumno se registra en **Registrarse**:
+El alumno de ejemplo ya está creado: es de Ingeniería en Sistemas Informáticos. Puede alquilar cualquier libro y no puede registrar títulos. Cualquier otro alumno se registra en **Registrarse**:
 
 1. Elige su carrera. Sin eso no se crea la cuenta, tampoco con GitHub o Google.
 2. Entra con el email y la contraseña que eligió, o con el mismo GitHub o Google.
-3. Registra un libro desde el detalle de un título, con **Registrar**. El alta queda en su carrera. Puede alquilar cualquier ejemplar.
+3. Abre un libro y lo alquila. No puede dar de alta un título: eso lo hace el administrador.
 4. En **Alquilados** ve el listado de los libros que pidió, con la fecha en que los retiró y la fecha límite. También le aparece un resumen arriba del catálogo. En **Avisos** ve el retiro, la devolución y si un libro está vencido.
 
 ## Deploy en Render

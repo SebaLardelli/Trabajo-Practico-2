@@ -7,7 +7,6 @@ import { demoBorrow, demoLoans, demoReturn } from "../lib/demo-loans";
 import { formatDay } from "../lib/days";
 import { spineColor } from "../lib/spine";
 import { bookStock } from "../lib/stock";
-import { RegisterBook } from "./RegisterBook";
 import { getBook } from "../services/books";
 import { borrowBook, listMyLoans, returnLoan } from "../services/loans";
 import type { Book } from "../types/book";
@@ -22,7 +21,6 @@ export const BookDetail = () => {
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loans, setLoans] = useState<LoanRecord[]>([]);
-  const [registerOpen, setRegisterOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -208,19 +206,6 @@ export const BookDetail = () => {
             <Link to="/alquilados" className="text-sm font-medium text-brand-700">
               Ver libros alquilados
             </Link>
-          </div>
-        )}
-
-        {user && user.role !== "admin" && (
-          <div className="mt-4">
-            <button type="button" className="btn-ghost text-sm" onClick={() => setRegisterOpen((open) => !open)}>
-              Registrar
-            </button>
-            {registerOpen && (
-              <div className="mt-4">
-                <RegisterBook embedded />
-              </div>
-            )}
           </div>
         )}
 

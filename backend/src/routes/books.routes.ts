@@ -10,7 +10,7 @@ const onlyAdmin = [authMiddleware, requireRole("admin")];
 router.get("/", validateQuery(listBooksQuerySchema), listBooks);
 router.get("/:id", getBookById);
 router.patch("/:id/loan", authMiddleware, validateBody(loanBookSchema), loanBook);
-router.post("/", authMiddleware, validateBody(createBookSchema), createBook);
+router.post("/", ...onlyAdmin, validateBody(createBookSchema), createBook);
 router.put("/:id", onlyAdmin, validateBody(updateBookSchema), updateBook);
 router.patch("/:id", onlyAdmin, validateBody(updateBookSchema), updateBook);
 router.delete("/:id", onlyAdmin, deleteBook);

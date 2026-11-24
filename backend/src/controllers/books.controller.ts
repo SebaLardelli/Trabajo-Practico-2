@@ -79,24 +79,14 @@ export async function createBook(req: Request<Record<string, string>, unknown, C
     return;
   }
 
-  const body = { ...req.body };
   if (user.role !== "admin") {
-    if (!user.career) {
-      res.status(403).json({ success: false, error: { message: "Tu cuenta no tiene una carrera asignada." } });
-      return;
-    }
-    if (body.career !== user.career) {
-      res.status(403).json({ success: false, error: { message: "Solo podés registrar libros de tu carrera." } });
-      return;
-    }
-    body.career = user.career;
-    body.faculty = user.faculty || body.faculty;
-    body.copies = 1;
+    res.status(403).json({ success: false, error: { message: "Solo un administrador puede registrar libros." } });
+    return;
   }
 
   try {
-    const copies = body.copies ?? 1;
-    const book = await Book.create({ ...body, copies, onLoan: 0, available: copies > 0 });
+    const copies = req.body.copies ?? 1;
+    const book = await Book.create({ ...req.body, copies, onLoan: 0, available: copies > 0 });
     res.status(201).json(book);
   } catch (error) {
     console.error("[books] error creating:", error);
