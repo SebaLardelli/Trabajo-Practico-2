@@ -55,8 +55,8 @@ async function notifyOverdue(loan: ILoanDocument): Promise<void> {
   await notify(
     loan,
     "overdue",
-    `Préstamo vencido: ${loan.bookTitle}`,
-    `El préstamo de «${loan.bookTitle}» venció el ${due} y sigue sin devolverse. No podés pedir otro libro hasta devolverlo.`,
+    "Se te venció",
+    `Se te pasó la fecha del ${due}. Devolvelo para poder pedir otro.`,
   );
   loan.overdueNotifiedAt = new Date();
   loan.status = "overdue";
@@ -211,8 +211,8 @@ export async function borrowBook(input: {
   await notify(
     loan,
     "loan",
-    `Retiraste ${book.title}`,
-    `Retiraste «${book.title}». La devolución es el ${formatDay(dueKey)}. Podés tener hasta ${LOAN_LIMIT} libros a la vez.`,
+    "Ya lo retiraste",
+    `Ya lo retiraste. Devolvelo antes del ${formatDay(dueKey)}.`,
   );
   if (loan.status === "overdue") await notifyOverdue(loan);
   return loan;
@@ -231,11 +231,14 @@ export async function returnLoan(loanId: string, actor: Reader): Promise<ILoanDo
   loan.status = "returned";
   await loan.save();
   await refreshStock(String(loan.book));
+  const onTime = dayKey(loan.dueDate) >= todayKey();
   await notify(
     loan,
     "returned",
-    `Devolviste ${loan.bookTitle}`,
-    `Devolviste «${loan.bookTitle}». El ejemplar volvió a sala y ya podés pedir otro si no llegaste al máximo de ${LOAN_LIMIT}.`,
+    onTime ? "Ya lo devolvimos" : "Lo devolvimos",
+    onTime
+      ? "Ya lo devolvimos. Si no llegaste a 3, podés pedir otro."
+      : "Lo devolvimos, pero el plazo ya había pasado.",
   );
   return loan;
 }
@@ -262,8 +265,8 @@ export async function changeLoanDates(loanId: string, startDate: string, dueDate
   await notify(
     loan,
     "updated",
-    `Nueva fecha para ${loan.bookTitle}`,
-    `La biblioteca actualizó tu préstamo de «${loan.bookTitle}». Inicio: ${formatDay(startDate)}. Devolución: ${formatDay(dueDate)}.`,
+    "Te cambiamos la fecha",
+    `Te cambiamos la fecha. Ahora lo devolvés el ${formatDay(dueDate)}.`,
   );
   if (overdue) await notifyOverdue(loan);
   return loan;

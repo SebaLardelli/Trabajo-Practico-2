@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { formatDay } from "../lib/days";
 import { demoLoans, demoReturn } from "../lib/demo-loans";
 import { getErrorMessage } from "../lib/api";
+import { gaveBook } from "../lib/notice-copy";
 import { listMyLoans, returnLoan } from "../services/loans";
 import type { LoanRecord } from "../types/loan";
 
@@ -15,7 +16,7 @@ function rank(status: LoanRecord["status"]): number {
 function statusLabel(status: LoanRecord["status"]): string {
   if (status === "overdue") return "Vencido";
   if (status === "returned") return "Devuelto";
-  return "Alquilado";
+  return "En préstamo";
 }
 
 function sorted(loans: LoanRecord[]): LoanRecord[] {
@@ -55,10 +56,10 @@ export const RentedBooks = ({ variant }: { variant: "page" | "home" }) => {
       if (loan._id.startsWith("demo-")) {
         const result = demoReturn(loan.bookId);
         if (result.error) setError(result.error);
-        else setNotice(`Devolviste «${loan.title}».`);
+        else setNotice(gaveBook(loan.dueDate));
       } else {
         await returnLoan(loan._id);
-        setNotice(`Devolviste «${loan.title}».`);
+        setNotice(gaveBook(loan.dueDate));
       }
       await load();
     } catch (err) {
@@ -77,7 +78,7 @@ export const RentedBooks = ({ variant }: { variant: "page" | "home" }) => {
           <h2 className={variant === "page" ? "text-3xl font-semibold tracking-tight" : "text-xl font-semibold"}>Libros alquilados</h2>
           <p className="mt-1 text-sm text-muted">
             {variant === "page"
-              ? "Listado de los libros que pediste. El límite de devolución es la fecha de la derecha."
+              ? "Cada préstamo tiene un plazo. Si pasa la fecha y no lo devolvés, queda vencido."
               : "Los que todavía no devolviste."}
           </p>
         </div>

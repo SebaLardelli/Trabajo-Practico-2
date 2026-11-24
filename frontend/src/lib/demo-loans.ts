@@ -1,4 +1,4 @@
-import { addDays, todayKey } from "./days";
+import { addDays, formatDay, todayKey } from "./days";
 import type { LoanRecord } from "../types/loan";
 
 const LOANS_KEY = "biblioteca.demoLoans";
@@ -12,6 +12,7 @@ export interface DemoNotice {
   body: string;
   read: boolean;
   createdAt: string;
+  loanId?: string;
 }
 
 function readLoans(): LoanRecord[] {
@@ -37,8 +38,8 @@ function readNotices(): DemoNotice[] {
   }
 }
 
-function pushNotice(notice: Omit<DemoNotice, "_id" | "read" | "createdAt">): void {
-  const next: DemoNotice = { ...notice, _id: `demo-notice-${Date.now()}`, read: false, createdAt: new Date().toISOString() };
+function pushNotice(notice: Omit<DemoNotice, "_id" | "read" | "createdAt" | "loanId">, loanId?: string): void {
+  const next: DemoNotice = { ...notice, loanId, _id: `demo-notice-${Date.now()}`, read: false, createdAt: new Date().toISOString() };
   localStorage.setItem(NOTICES_KEY, JSON.stringify([next, ...readNotices()].slice(0, 40)));
 }
 
@@ -50,17 +51,23 @@ function withStatus(loan: LoanRecord): LoanRecord {
 
 export function demoLoans(): LoanRecord[] {
   const loans = readLoans();
-  const announced = new Set(readNotices().filter((item) => item.kind === "overdue").map((item) => item.title));
+  const announced = new Set(
+    readNotices()
+      .filter((item) => item.kind === "overdue")
+      .map((item) => item.loanId ?? item.title),
+  );
   for (const loan of loans) {
     if (loan.status !== "overdue") continue;
-    const title = `Préstamo vencido: ${loan.title}`;
-    if (announced.has(title)) continue;
-    pushNotice({
-      kind: "overdue",
-      title,
-      body: `El préstamo de «${loan.title}» venció el ${loan.dueDate} y sigue sin devolverse.`,
-    });
-    announced.add(title);
+    if (announced.has(loan._id)) continue;
+    pushNotice(
+      {
+        kind: "overdue",
+        title: "Se te venció",
+        body: `Se te pasó la fecha del ${formatDay(loan.dueDate)}. Devolvelo para poder pedir otro.`,
+      },
+      loan._id,
+    );
+    announced.add(loan._id);
   }
   return loans;
 }
@@ -104,8 +111,8 @@ export function demoBorrow(bookId: string, title: string): { loan?: LoanRecord; 
   writeLoans([loan, ...readLoans()]);
   pushNotice({
     kind: "loan",
-    title: `Retiraste ${title}`,
-    body: `Retiraste «${title}». La devolución es el ${dueDate}. Este préstamo queda en este navegador porque el ejemplar es de demostración.`,
+    title: "Ya lo retiraste",
+    body: `Ya lo retiraste. Devolvelo antes del ${formatDay(dueDate)}.`,
   });
   return { loan };
 }
@@ -118,8 +125,10 @@ export function demoReturn(bookId: string): { loan?: LoanRecord; error?: string 
   writeLoans(loans.map((loan) => (loan._id === current._id ? returned : loan)));
   pushNotice({
     kind: "returned",
-    title: `Devolviste ${current.title}`,
-    body: `Devolviste «${current.title}». El ejemplar volvió a sala.`,
+    title: current.dueDate < todayKey() ? "Lo devolvimos" : "Ya lo devolvimos",
+    body: current.dueDate < todayKey()
+      ? "Lo devolvimos, pero el plazo ya había pasado."
+      : "Ya lo devolvimos. Si no llegaste a 3, podés pedir otro.",
   });
   return { loan: returned };
 }

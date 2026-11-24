@@ -6,6 +6,7 @@ import { useSession } from "../lib/auth-client";
 import { demoBorrow, demoLoans, demoReturn } from "../lib/demo-loans";
 import { formatDay } from "../lib/days";
 import { spineColor } from "../lib/spine";
+import { gaveBook, tookBook } from "../lib/notice-copy";
 import { bookStock } from "../lib/stock";
 import { getBook } from "../services/books";
 import { borrowBook, listMyLoans, returnLoan } from "../services/loans";
@@ -90,17 +91,17 @@ export const BookDetail = () => {
           const fresh = findDemoBook(book._id);
           if (fresh) setBook(fresh);
           setLoans(demoLoans());
-          setNotice(activeLoan ? `Devolviste «${book.title}».` : `Retiraste «${book.title}». Devolvé antes del ${formatDay(result.loan?.dueDate ?? "")}.`);
+          setNotice(activeLoan ? gaveBook(activeLoan.dueDate) : tookBook(result.loan?.dueDate ?? ""));
         }
         return;
       }
 
       if (activeLoan) {
         await returnLoan(activeLoan._id);
-        setNotice(`Devolviste «${book.title}». Te avisamos en Avisos.`);
+        setNotice(gaveBook(activeLoan.dueDate));
       } else {
         const created = await borrowBook({ bookId: book._id });
-        setNotice(`Retiraste «${book.title}». La devolución es el ${formatDay(created.dueDate)}.`);
+        setNotice(tookBook(created.dueDate));
       }
       const [fresh, mine] = await Promise.all([getBook(book._id), listMyLoans()]);
       setBook(fresh);
