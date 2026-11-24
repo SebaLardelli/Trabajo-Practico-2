@@ -1,18 +1,27 @@
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { CAREERS, FACULTIES } from "../data/uai";
+import { AuthorField } from "./AuthorField";
+import { CAREERS } from "../data/uai";
 import { getErrorMessage } from "../lib/api";
 import { bookSchema, emptyBook, toBookFormValues, type BookFormValues } from "../schemas/book.schema";
 import type { Book } from "../types/book";
 
 interface BookFormProps {
   book: Book | null;
+  authors: string[];
   onSave: (values: BookFormValues) => Promise<void>;
   onCancel: () => void;
 }
 
-export const BookForm = ({ book, onSave, onCancel }: BookFormProps) => {
+function facultyOf(career: string): string {
+  if (career === "Todas las carreras") return "Formación general";
+  return CAREERS.find((item) => item.name === career)?.faculty ?? "";
+}
+
+const careerNames = ["Todas las carreras", ...CAREERS.map((item) => item.name)].sort((a, b) => a.localeCompare(b, "es"));
+
+export const BookForm = ({ book, authors, onSave, onCancel }: BookFormProps) => {
   const {
     register,
     handleSubmit,
@@ -20,25 +29,21 @@ export const BookForm = ({ book, onSave, onCancel }: BookFormProps) => {
     setError,
     watch,
     setValue,
-    getValues,
     formState: { errors, isSubmitting },
   } = useForm<BookFormValues>({
     resolver: zodResolver(bookSchema),
     values: book ? toBookFormValues(book) : emptyBook,
   });
-  const faculty = watch("faculty");
-  const careers = CAREERS.filter((item) => item.faculty === faculty);
+  const career = watch("career");
+  const author = watch("author");
 
   useEffect(() => {
-    if (!faculty || faculty === "Formación general") return;
-    const names = CAREERS.filter((item) => item.faculty === faculty).map((item) => item.name);
-    if (names.includes(getValues("career"))) return;
-    setValue("career", names[0] ?? "");
-  }, [faculty, getValues, setValue]);
+    setValue("faculty", facultyOf(career));
+  }, [career, setValue]);
 
   const onSubmit = async (values: BookFormValues) => {
     try {
-      await onSave({ ...values, available: values.copies > 0 });
+      await onSave({ ...values, faculty: facultyOf(values.career), available: values.copies > 0 });
       reset(emptyBook);
     } catch (err) {
       setError("root.server", { message: getErrorMessage(err) });
@@ -53,32 +58,20 @@ export const BookForm = ({ book, onSave, onCancel }: BookFormProps) => {
         <input className="field font-normal" {...register("title")} />
         {errors.title && <span className="field-error">{errors.title.message}</span>}
       </label>
-      <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Autor
-        <input className="field font-normal" {...register("author")} />
-        {errors.author && <span className="field-error">{errors.author.message}</span>}
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm font-medium">
-        Facultad
-        <select className="field font-normal" {...register("faculty")}>
-          <option value="">Elegí una facultad</option>
-          {FACULTIES.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-          <option value="Formación general">Formación general</option>
-        </select>
-        {errors.faculty && <span className="field-error">{errors.faculty.message}</span>}
-      </label>
+      <AuthorField
+        key={book?._id ?? "nuevo"}
+        value={author}
+        authors={authors}
+        error={errors.author?.message}
+        onChange={(next) => setValue("author", next, { shouldValidate: true })}
+      />
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Carrera
         <select className="field font-normal" {...register("career")}>
           <option value="">Elegí una carrera</option>
-          {faculty === "Formación general" && <option value="Todas las carreras">Todas las carreras</option>}
-          {careers.map((item) => (
-            <option key={item.name} value={item.name}>
-              {item.name}
+          {careerNames.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>
@@ -110,11 +103,9 @@ export const BookForm = ({ book, onSave, onCancel }: BookFormProps) => {
         <button type="submit" disabled={isSubmitting} className="btn">
           {isSubmitting ? "Guardando..." : book ? "Guardar cambios" : "Crear"}
         </button>
-        {book && (
-          <button type="button" onClick={onCancel} className="btn-ghost">
-            Cancelar
-          </button>
-        )}
+        <button type="button" onClick={onCancel} className="btn-ghost">
+          Cancelar
+        </button>
       </div>
     </form>
   );

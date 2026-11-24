@@ -75,6 +75,10 @@ export const libraryBooks: SeedBook[] = baseBooks.flatMap((book) => [
   })),
 ]);
 
+export function catalogAuthors(): string[] {
+  return [...new Set(libraryBooks.map((book) => book.author))].sort((a, b) => a.localeCompare(b, "es"));
+}
+
 const rented = new Map<string, boolean>();
 
 const demoBooks: Book[] = libraryBooks.map((book, index) => ({

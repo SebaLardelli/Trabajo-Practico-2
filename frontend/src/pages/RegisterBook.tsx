@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router";
 import { z } from "zod";
+import { AuthorField } from "../components/AuthorField";
+import { catalogAuthors } from "../data/catalog";
 import { getErrorMessage } from "../lib/api";
 import { useSession } from "../lib/auth-client";
 import { bookSchema } from "../schemas/book.schema";
@@ -16,11 +18,14 @@ export const RegisterBook = ({ embedded = false }: { embedded?: boolean }) => {
   const career = session?.user.career ?? "";
   const faculty = session?.user.faculty ?? "";
   const [done, setDone] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const {
     register,
     handleSubmit,
     reset,
     setError,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<StudentBookValues>({
     resolver: zodResolver(studentBookSchema),
@@ -41,6 +46,7 @@ export const RegisterBook = ({ embedded = false }: { embedded?: boolean }) => {
       const book = await createBook({ ...values, faculty, career, available: true, copies: 1 });
       setDone(book.title);
       reset({ title: "", author: "", pages: 1, publishedAt: "" });
+      setFormKey((current) => current + 1);
     } catch (err) {
       setError("root.server", { message: getErrorMessage(err) });
     }
@@ -66,11 +72,13 @@ export const RegisterBook = ({ embedded = false }: { embedded?: boolean }) => {
           <input className="field font-normal" {...register("title")} />
           {errors.title && <span className="field-error">{errors.title.message}</span>}
         </label>
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Autor
-          <input className="field font-normal" {...register("author")} />
-          {errors.author && <span className="field-error">{errors.author.message}</span>}
-        </label>
+        <AuthorField
+          key={formKey}
+          value={watch("author")}
+          authors={catalogAuthors()}
+          error={errors.author?.message}
+          onChange={(author) => setValue("author", author, { shouldValidate: true })}
+        />
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Páginas
